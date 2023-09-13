@@ -1,2 +1,4 @@
-# 20Hz
-Re-analysis of a behavioral task performance were parameters of deep brain stimulation in patients with Parkinson's disease were systematically varied.
+# 20Hz Data Analysis description
+Re-analysis of a behavioral task performance were parameters of deep brain stimulation (DBS) in patients with Parkinson's disease were systematically varied. Participants performed a simple reaction time task, a flanker task, a modified version of the Go-NoGo task and a signal-change task (variation of the stop-signal task). The tasks were performed while participants received their usual high-frequency stimulation for the treatment of their motor-symptoms, our experimental low-frequency 20Hz stimulation or no stimulation (OFF). Both experimenter and participants were blinded to the stimulation condition.
+
+For the analysis we use bayesian mixed effect models with a shifted-log normal liklihood for the reaction time analysis, and a bernoulli liklihood with a logit link function for the analysis of the error data. In addition to explore the behavior of the participants in the Go-NoGo task further, we use bayesian hierachical drift-diffusion models. Mixed effect modelling is performed in R using the brms package, whereas the drift diffusion modelling is performed in Python using the hddm package.
