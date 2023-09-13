@@ -1,0 +1,584 @@
+---
+title: "MF_01_Modelfree_Analysis"
+author: "Julius Kricheldorff"
+format: html
+editor: visual
+---
+
+## Load all data files and set working environment
+
+In this chunk we load and set up the data.
+
+```{r, setup, include=FALSE}
+
+knitr::opts_knit$set(root.dir = 'C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+```
+
+```{r, echo=FALSE, results = 'hide', message=FALSE}
+
+# load packages
+library(haven) # import SPSS files
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(ggdist)
+library(plotrix) # to calculate standard error
+library(ggsci) # scientific color pallet es
+library(tidybayes)
+
+# load files
+flanker <- read_csv(file = "flanker.csv") 
+GoNoGo <- read_csv(file = "GoNoGo.csv") 
+StoppSignal <- read_csv(file = "StoppSignal.csv") 
+SimpleRT <- read_csv(file = "SimpleRT.csv") 
+```
+
+First let us generate the data for this
+
+```{r, echo = FALSE}
+SimpleRT_delta <- SimpleRT %>%
+  filter(RT <2) %>%
+  group_by(Part_nr, Stim_verb) %>%
+  mutate(RT_rank = ntile(RT,5)) %>%
+  ungroup() %>%
+  group_by(Stim_verb, RT_rank) %>%
+  summarise(mean_RT = mean(RT),
+            RT_se = std.error(Correct_Response-1),
+    accuracy = round(mean(Correct_Response), 4), 
+            se_accuracy = std.error(Correct_Response-1))
+
+flanker_delta <- flanker %>%
+  filter(RT <2) %>%
+  group_by(Part_nr, Stim_verb, Congruency) %>%
+  mutate(RT_rank = ntile(RT,5)) %>%
+  ungroup() %>%
+  group_by(Stim_verb, Congruency, RT_rank) %>%
+  summarise(mean_RT = mean(RT),
+            RT_se = std.error(Correct_Response-1),
+    accuracy = round(mean(Correct_Response), 4), 
+            se_accuracy = std.error(Correct_Response-1))
+
+GoNoGo_delta <- GoNoGo %>%
+  filter(RT <2) %>%
+  group_by(Part_nr, Stim_verb, GoNoGo) %>%
+  mutate(RT_rank = ntile(RT,5)) %>%
+  ungroup() %>%
+  group_by(Stim_verb, GoNoGo, RT_rank) %>%
+  summarise(mean_RT = mean(RT),
+            RT_se = std.error(Correct_Response-1),
+    accuracy = round(mean(Correct_Response), 4), 
+            se_accuracy = std.error(Correct_Response-1))
+
+StoppSignal_delta <- StoppSignal %>%
+  filter(RT <2) %>%
+  group_by(Part_nr, Stim_verb, StopTrl) %>%
+  mutate(RT_rank = ntile(RT,5)) %>%
+  ungroup() %>%
+  group_by(Stim_verb, StopTrl, RT_rank) %>%
+  summarise(mean_RT = mean(RT),
+            RT_se = std.error(Correct_Response-1),
+    accuracy = round(mean(Correct_Response), 4), 
+            se_accuracy = std.error(Correct_Response-1))
+
+```
+
+## Simple Reaction Time Task
+
+First we plot the reaction times for each task, only for the correct trials
+
+### Reaction Time Simple Reaction Time Task
+First we plot the reaction times for the simple stimulus response task. We see a little more variability in the non-therapeutic stimulation conditions, but arguably no difference in RT.
+
+```{r, echo = FALSE}
+ggplot(data = SimpleRT %>% filter(Correct_Response == 1,
+                                  RT < 2,
+                                  RT > 0.2), aes(x = Stim_verb, y = RT, fill = Stim_verb)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Condition", fill = "Stimulation Type") +
+  ggtitle("Reaction Time Distributions Simple Reaction Time Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 1.5)) +
+  scale_fill_aaas() 
+```
+### Errors Simple Reaction Time Task
+
+We definitely see fewer error trials in the 20Hz condition here compared to the 130Hz condition
+
+```{r, echo = FALSE}
+SimpleRT_error <- SimpleRT %>%
+  group_by(Stim_verb) %>%
+  summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1) )
+
+ggplot(data = SimpleRT_error, aes(x = Stim_verb, y = prop_error, fill = Stim_verb)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Error in percent", x = "Stimulation Condition", fill = "Stimulation Type") +
+  ggtitle("Error Distributions Simple Reaction Time Task")+ 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), position = position_dodge(width = 0.9))+
+  scale_fill_aaas() 
+
+```
+### Delta Plot Simple Reaction Time Task
+Very similar RTs and accuracies for the comparison between OFF and 20Hz stimulation. For the 130Hz stimulation we see that participants simply responded more impulsive and inaccurate.
+
+```{r, echo=FALSE}
+ggplot(data = SimpleRT_delta, aes(x = mean_RT, y = accuracy, color = Stim_verb)) +
+  theme_bw(base_size = 14) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Mean Accuracy in %", x = "Mean Quantile RT in s", color = "Stimulation Condition") +
+  ggtitle("Delta Plot Simple Reaction Time Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  scale_color_aaas() 
+```
+### Reaction Time Analysis SRT
+
+```{r, eval = FALSE}
+load(file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
+post_eff_srt <- fit_shifted_log_SST %>%
+  spread_draws(b_Intercept, b_StimConS20_SOFF, b_StimConS130_S20, sigma, ndt) %>%
+  mutate(Est_S130Hz = exp(b_Intercept + (-(2/3))*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF) + sigma/2 + ndt,
+         Est_S20Hz = exp(b_Intercept + (1/3)*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF) + sigma/2 + ndt,
+         Est_SOFF = exp(b_Intercept + (1/3)*b_StimConS130_S20 + (-(2/3))*b_StimConS20_SOFF) + sigma/2 + ndt,
+         S20_vs_S130 = Est_S20Hz - Est_S130Hz,
+         S20_vs_SOFF = Est_S20Hz - Est_SOFF) %>%
+  select(S20_vs_S130, S20_vs_SOFF) %>%
+  summarise_draws()
+
+post_eff_srt
+```
+
+
+### Accuracy Analysis SRT
+
+```{r}
+load(file = "E:/20Hz/Data/Modelle/logreg_SST.rda")
+post_eff_log_SST <- fit_logReg_SST %>%
+  spread_draws(b_Intercept, b_StimConS20_SOFF, b_StimConS130_S20) %>%
+  mutate(Est_S130Hz = plogis(b_Intercept + (-(2/3))*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF),
+         Est_S20Hz = plogis(b_Intercept + (1/3)*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF),
+         Est_SOFF = plogis(b_Intercept + (1/3)*b_StimConS130_S20 + (-(2/3))*b_StimConS20_SOFF),
+         S20_vs_S130 = Est_S20Hz - Est_S130Hz,
+         S20_vs_SOFF = Est_S20Hz - Est_SOFF) %>%
+  summarise_draws()
+
+post_eff_log_SST
+
+```
+
+
+
+
+## Flanker Task
+
+### Reaction Time Flanker Task
+
+Looking at the flanker data, there does seem to be some kind of main effect, with faster RTs in the 130Hz condition, but nothing else beside that.
+
+```{r, echo=FALSE}
+ggplot(data = flanker %>% filter(Correct_Response == 1,
+                                  RT < 2,
+                                  RT > 0.2), aes(x = Stim_verb, y = RT, fill = Congruency)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Type", fill = "Congruency") +
+  ggtitle("Reaction Time Distributions Flanker Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 1.9))+
+  scale_fill_npg() 
+```
+### Congruency Sequence Effects Flanker Task
+Does not look like we have something here to be honest - but still worth to test. Maybe no CSE for 130Hz?
+
+```{r, echo=FALSE}
+
+flanker <- flanker %>%
+  mutate(N_1 = case_when(
+    lag(Congruency) == "congruent" ~ "prev_congruent",
+    lag(Congruency) == "incongruent" ~ "prev_incongruent"))
+ggplot(data = flanker %>% filter(Correct_Response == 1,
+                                  RT < 2,
+                                  RT > 0.2) %>% drop_na(N_1), aes(x = N_1, y = RT, fill = Congruency)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Type", fill = "Congruency") +
+  facet_grid(cols = vars(Stim_verb)) +
+  ggtitle("Congruency Sequence Effect Flanker Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 1.9))+
+  scale_fill_npg() 
+```
+
+### Errors Flanker Task
+
+We definitely see improvements across the board in the 20 Hz data here
+
+```{r, echo = FALSE}
+flanker_error <- flanker %>%
+  group_by(Stim_verb, Congruency) %>%
+  summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1) )
+
+ggplot(data = flanker_error, aes(x = Stim_verb, y = prop_error, fill = Congruency))  + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Error in percent", x = "Stimulation Condition", fill = "Congruency") +
+  ggtitle("Error Distributions Flanker Task")+ 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), position = position_dodge(width = 0.9))+
+  scale_fill_npg() 
+
+```
+### Delta Plot Flanker Task
+In the flanker task, it appears that participants on 20Hz overall responded more slowely and accurately, particulary on the incongruent trials
+```{r, echo=FALSE}
+ggplot(data = flanker_delta, aes(x = mean_RT, y = accuracy, color = Stim_verb)) +
+  facet_grid(rows = vars(Congruency)) +
+  theme_bw(base_size = 14) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Mean Accuracy in %", x = "Mean Quantile RT in s", color = "Stimulation Condition") +
+  ggtitle("Delta Plots Flanker Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  scale_color_aaas() 
+```
+### Reaction Time Analysis Flanker Task
+
+```{r}
+load(file = "E:/20Hz/Data/Modelle/shifted_log_flanker.rda")
+post_eff_flanker <- fit_shifted_log_flanker %>%
+  spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
+               b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF, sigma, ndt) %>%
+  mutate(Est_S130_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (-(1/3))*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Est_S130_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (1/3)*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Est_S20_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (1/6)*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Est_S20_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (-(1/6))*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Est_SOFF_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (1/6)*b_Contrast_FStroop_20v130 + (-(1/3))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Est_SOFF_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (-(1/6))*b_Contrast_FStroop_20v130 + (1/3)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
+         Congruency = (Est_S20_I + Est_S130_I + Est_SOFF_I)/3 - (Est_S20_C + Est_S130_C + Est_SOFF_C)/3,
+         S20_vs_S130 = (Est_S20_I + Est_S20_C)/2 - (Est_S130_I + Est_S130_C)/2,
+         S20_vs_SOFF = (Est_S20_I + Est_S20_C)/2 - (Est_SOFF_I + Est_SOFF_C)/2,
+         Stroop_S20_vs_S130 = (Est_S20_I - Est_S20_C) - (Est_S130_I - Est_S130_C),
+         Stroop_S20_vs_SOFF =(Est_S20_I - Est_SOFF_C) - (Est_SOFF_I - Est_SOFF_C)) %>%
+  select(Congruency, S20_vs_S130, S20_vs_SOFF, Stroop_S20_vs_S130, Stroop_S20_vs_SOFF) %>%
+  summarise_draws()
+
+post_eff_flanker 
+```
+
+### Accuracy Analysis Flanker Task
+
+```{r}
+
+load(file = "E:/20Hz/Data/Modelle/log_reg_flanker.rda")
+post_eff_logreg_flanker <- fit_log_flanker %>%
+  spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
+               b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF) %>%
+  mutate(Est_S130_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (-(1/3))*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF),
+         Est_S130_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (1/3)*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF),
+         Est_S20_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (1/6)*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF),
+         Est_S20_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (-(1/6))*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF),
+         Est_SOFF_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (1/6)*b_Contrast_FStroop_20v130 + (-(1/3))*b_Contrast_FStroop_20vOFF),
+         Est_SOFF_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (-(1/6))*b_Contrast_FStroop_20v130 + (1/3)*b_Contrast_FStroop_20vOFF),
+         Congruency = (Est_S20_I + Est_S130_I + Est_SOFF_I)/3 - (Est_S20_C + Est_S130_C + Est_SOFF_C)/3,
+         S20_vs_S130 = (Est_S20_I + Est_S20_C)/2 - (Est_S130_I + Est_S130_C)/2,
+         S20_vs_SOFF = (Est_S20_I + Est_SOFF_C)/2 - (Est_SOFF_I + Est_SOFF_C)/2,
+         Stroop_S20_vs_S130 = (Est_S20_I - Est_S20_C) - (Est_S130_I - Est_S130_C),
+         Stroop_S20_vs_SOFF =(Est_S20_I - Est_S20_C) - (Est_SOFF_I - Est_SOFF_C)) %>%
+  select(Congruency, S20_vs_S130, S20_vs_SOFF, Stroop_S20_vs_S130, Stroop_S20_vs_SOFF) %>%
+  summarise_draws()
+
+post_eff_logreg_flanker
+```
+
+
+## Go NoGo Task
+
+### Reaction Time Go-NoGo Task
+Arguably, slightly slower performance on the NoGo - Go trials for the 20Hz participants?
+
+```{r, echo=FALSE}
+ggplot(data = GoNoGo %>% filter(Correct_Response == 1,
+                                GoNoGo != "NoGo - Stop",
+                                  RT < 2,
+                                  RT > 0.2), aes(x = Stim_verb, y = RT, fill = GoNoGo)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Type", fill = "Trial Type") +
+  ggtitle("Reaction Time Distributions Go-NoGo Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 2))+
+  scale_fill_nejm() 
+```
+### Errors Go-NoGo Task
+
+Across the board improvements in the Go-NoGo task
+
+```{r, echo = FALSE}
+GoNoGo_error <- GoNoGo %>%
+  group_by(Stim_verb, GoNoGo) %>%
+  summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1) )
+
+ggplot(data = GoNoGo_error, aes(x = Stim_verb, y = prop_error, fill = GoNoGo))  + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Error in percent", x = "Stimulation Condition", fill = "Trial Type") +
+  ggtitle("Error Distributions Go-NoGo Task")+ 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), position = position_dodge(width = 0.9))+
+  scale_fill_nejm() 
+
+```
+
+### Delta Plot Go-NoGo Task
+It is hard to say where participants got their competitive advantage. They responded slightly slower and more accurately on the Go trials, but on the Stop Go trials they responded equally fast as Off stimulation. A parsimonious explanation would be improved cognitive control, i.e. the ability to override automatic response tendencies.
+```{r, echo=FALSE}
+ggplot(data = GoNoGo_delta %>% filter(GoNoGo != "NoGo - Stop"), 
+       aes(x = mean_RT, y = accuracy, color = Stim_verb)) +
+  facet_grid(rows = vars(GoNoGo)) +
+  theme_bw(base_size = 14) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Mean Accuracy in %", x = "Mean Quantile RT in s", color = "Stimulation Condition") +
+  ggtitle("Delta Plots Go-NoGo Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  scale_color_aaas() 
+```
+### RT Analysis Go - NoGo Task
+
+```{r, echo = FALSE}
+load(file = "E:/20Hz/Data/Modelle/shifted_log_GoNoGo.rda")
+post_eff <- fit_shifted_log_GoNoGo %>%
+  spread_draws(b_Intercept, b_Contrast_FGo_NoGo_Go, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
+               b_Contrast_FGoDiff_20v130, b_Contrast_FGoDiff_20vOFF, sigma, ndt) %>%
+  mutate(Est_S130_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (-(1/3))*b_Contrast_FGoDiff_20v130 + (1/6)*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
+         Est_S130_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                          + (1/3)*b_Contrast_FGoDiff_20v130 + (-(1/6))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
+         Est_S20_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (1/6)*b_Contrast_FGoDiff_20v130 + (1/6)*b_Contrast_FGoDiff_20vOFF)+ sigma/2 + ndt,
+         Est_S20_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
+                         + (-(1/6))*b_Contrast_FGoDiff_20v130 + (-(1/6))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
+         Est_SOFF_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (1/6)*b_Contrast_FGoDiff_20v130 + (-(1/3))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
+         Est_SOFF_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
+                          + (-(1/6))*b_Contrast_FGoDiff_20v130 + (1/3)*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
+         Go_NoGo_Go = (Est_S20_NoGo + Est_S130_NoGo + Est_SOFF_NoGo)/3 - (Est_S20_Go + Est_S130_Go + Est_SOFF_Go)/3,
+         S20_vs_S130 = (Est_S20_NoGo + Est_S20_Go)/2 - (Est_S130_NoGo + Est_S130_Go)/2,
+         S20_vs_SOFF = (Est_S20_NoGo + Est_SOFF_Go)/2 - (Est_SOFF_NoGo + Est_SOFF_Go)/2,
+         GoDiff_S20_vs_S130 = (Est_S20_NoGo - Est_S20_Go) - (Est_S130_NoGo - Est_S130_Go),
+         GoDiff_S20_vs_SOFF =(Est_S20_NoGo - Est_S20_Go) - (Est_SOFF_NoGo - Est_SOFF_Go)) %>%
+  select(Go_NoGo_Go, S20_vs_S130, S20_vs_SOFF, GoDiff_S20_vs_S130, GoDiff_S20_vs_SOFF) %>%
+  summarise_draws(mean, median, sd, ~quantile(.x, probs = c(0.025, 0.975)))
+
+post_eff
+
+```
+
+
+### Error Analysis Go - NoGo Task
+
+```{r, echo=FALSE}
+load(file = "E:/20Hz/Data/Modelle/log_reg_GoNoGo2.rda")
+warp_em2 <- emmeans(fit_log_flanker2, ~ Stim_verb|GoNoGo, epred = TRUE)
+cont2 <- contrast(regrid(warp_em2, transform = "response"), interaction = "pairwise")
+summary(cont2, type = "response", point.est = mean)
+
+```
+
+## Stop Signal Task
+
+Reaction Time Stop-Signal Task
+Arguably much more variability on the Stop trials in the 130Hz participants.
+
+```{r, echo=FALSE}
+ggplot(data = StoppSignal %>% filter(Correct_Response == 1,
+                                  RT < 2,
+                                  RT > 0.2), aes(x = Stim_verb, y = RT, fill = StopTrl)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Type", fill = "Trial Type") +
+  ggtitle("Reaction Time Distributions Stop-Signal Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 3.5))+
+  scale_fill_lancet() 
+```
+
+Because this is not actually what we are after, we will also claculate the Stop-Signal reaction time
+
+
+```{r, echo=FALSE}
+
+Average_correct_Go <- StoppSignal %>%
+  filter(StopTrl =="Go",
+         Correct_Response == 1,
+                                  RT < 2,
+                                  RT > 0.2) %>%
+  group_by(Part_nr, Stim_verb) %>%
+  summarise(meanRT = mean(RT))
+Average_SSD <- StoppSignal %>%
+  filter(StopTrl =="Stop",
+                                  RT < 2,
+                                  RT > 0.2) %>%
+  group_by(Part_nr, Stim_verb) %>%
+  summarise(meanStopRT = mean(delay)/1000)
+
+joined_Dataset <- bind_cols(Average_correct_Go,Average_SSD %>% select(meanStopRT)) %>%
+  mutate(SSRT = meanRT - meanStopRT)
+
+joined_Dataset %>% group_by(Stim_verb)  %>% summarise(mean = mean(SSRT))
+
+ggplot(data = joined_Dataset, aes(x = Stim_verb, y = SSRT, fill = Stim_verb)) +
+  theme_bw(base_size = 14) +
+  #stat_boxplot(geom = "errorbar", width = 0.1) +
+  geom_boxplot(alpha = 0.7, width = 0.23, outlier.color = NA) +
+  labs(y= "RT in s", x = "Stimulation Condition", fill = "Stimulation Type") +
+  ggtitle("SSRT Stop-Signal Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  coord_cartesian(ylim = c(0, 1.5))+
+  scale_fill_aaas() 
+```
+
+
+
+### Errors Stop-Signal Task
+
+Slightly better performance on the Go trials in the 20Hz condition as compared to the 130Hz conditions
+
+```{r, echo = FALSE}
+StoppSignal_error <- StoppSignal %>%
+  group_by(Stim_verb, StopTrl) %>%
+  summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1) )
+
+ggplot(data = StoppSignal_error, aes(x = Stim_verb, y = prop_error, fill = StopTrl))  + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Error in percent", x = "Stimulation Condition", fill = "Trial Type") +
+  ggtitle("Error Distributions Stop-Signal Task")+ 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), position = position_dodge(width = 0.9))+
+  scale_fill_aaas() 
+
+```
+
+### Delta Plot Stop Signal Task
+Not really much to see other than that I should exclude some trials that are obvieously way too long
+```{r, echo=FALSE}
+ggplot(data = StoppSignal_delta, 
+       aes(x = mean_RT, y = accuracy, color = Stim_verb)) +
+  facet_grid(rows = vars(StopTrl)) +
+  theme_bw(base_size = 14) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y= "Mean Accuracy in %", x = "Mean Quantile RT in s", color = "Stimulation Condition") +
+  ggtitle("Delta Plots Stop Signal Task") + 
+  theme(
+    strip.text.x = element_text(face = "bold"),
+    strip.text.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position  =  "panel",
+    panel.background = element_blank()
+  ) +
+  scale_color_aaas() 
+```
