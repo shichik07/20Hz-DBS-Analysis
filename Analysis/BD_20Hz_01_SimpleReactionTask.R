@@ -15,7 +15,7 @@ library(hypr)
 library(tiybayes)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
 SimpleRT<- read_csv(file = "SimpleRT.csv") %>%
@@ -44,7 +44,7 @@ contrasts(SimpleRT$StimCon)
 # than 200ms a longer than 2s
 RT_data <- SimpleRT %>%
   filter(Correct_Response == 1,
-         RT <2,
+         RT <3,
          RT > 0.2) %>%
   mutate(RT_ms = RT*1000)
 
