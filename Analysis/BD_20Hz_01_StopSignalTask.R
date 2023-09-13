@@ -16,7 +16,7 @@ library(emmeans)
 library(purrr)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
 StopSignal<- read_csv(file = "StoppSignal.csv") %>%
@@ -45,12 +45,12 @@ StopSignal_Error <- StopSignal %>%
 # than 200ms a longer than 2s
 RT_data <- StopSignal %>%
   filter(Correct_Response == 1,
-         RT <2,
+         RT <3,
          RT > 0.2,
          StopTrl == "Go") %>%
   mutate(RT_ms = RT*1000)
 
-RT_data2 <-  SStopSignal %>%
+RT_data2 <-  StopSignal %>%
   filter(Correct_Response == 1,
          StopTrl == "Go") %>%
   mutate(RT_ms = RT*1000)
