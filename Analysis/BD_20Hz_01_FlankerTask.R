@@ -15,7 +15,7 @@ library(hypr)
 library(tidybayes)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
 flankerRT<- read_csv(file = "flanker.csv") %>%
