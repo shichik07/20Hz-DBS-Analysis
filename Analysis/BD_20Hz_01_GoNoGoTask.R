@@ -5,6 +5,8 @@
 # Date 11.01.2023
 ####
 
+# Address git : C/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis
+
 # load packages
 library(haven) # import SPSS files
 library(dplyr)
@@ -16,7 +18,7 @@ library(tidybayes)
 library(emmeans)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
 GoNoGo<- read_csv(file = "GoNoGo.csv") %>%

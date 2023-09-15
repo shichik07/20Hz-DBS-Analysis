@@ -5,6 +5,8 @@
 # Date 11.01.2023
 ####
 
+# Address git : C/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis
+
 # load packages
 library(haven) # import SPSS files
 library(dplyr)
@@ -85,6 +87,7 @@ fit_shifted_log_SST <- brm(formula = m1_SRT,
 )
 
 save(fit_shifted_log_SST, file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
 
 # posteriro predictive checks
 pp_check(fit_shifted_log_SST, ndraws = 11, type = "hist")

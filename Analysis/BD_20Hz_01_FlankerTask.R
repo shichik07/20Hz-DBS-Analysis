@@ -5,6 +5,8 @@
 # Date 11.01.2023
 ####
 
+# Address git : C/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis
+
 # load packages
 library(haven) # import SPSS files
 library(dplyr)
@@ -109,6 +111,7 @@ fit_shifted_log_flanker <- brm(formula = m1_flanker,
 )
 
 save(fit_shifted_log_flanker, file = "E:/20Hz/Data/Modelle/shifted_log_flanker.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_flanker.rda")
 
 # posteriro predictive checks
 pp_check(fit_shifted_log_flanker, ndraws = 11, type = "hist")
