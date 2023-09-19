@@ -186,7 +186,8 @@ fn_scoretidy <- function(.data) {
     pull(meanerr)
   # Go RTs
   go_rts <- .data %>% filter(StopTrl != "Stop",
-                                      RT > 0)
+                                      RT > 0, 
+                             RT < 3000)
   # n-th percentile of Go RTs
   rt_quantile <- go_rts %>%
     summarise(rt_quantile = quantile(RT, p_failed_nogo, names = FALSE)*1000) %>%
