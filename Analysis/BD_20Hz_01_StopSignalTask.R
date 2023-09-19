@@ -16,6 +16,7 @@ library(hypr)
 library(tidybayes)
 library(emmeans)
 library(purrr)
+library(BayesFactor)
 
 # set directory
 setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
@@ -186,8 +187,7 @@ fn_scoretidy <- function(.data) {
     pull(meanerr)
   # Go RTs
   go_rts <- .data %>% filter(StopTrl != "Stop",
-                                      RT > 0, 
-                             RT < 3000)
+                                      RT > 0)
   # n-th percentile of Go RTs
   rt_quantile <- go_rts %>%
     summarise(rt_quantile = quantile(RT, p_failed_nogo, names = FALSE)*1000) %>%
@@ -196,7 +196,33 @@ fn_scoretidy <- function(.data) {
   return(round(rt_quantile - mean_ssd))
 }
 
-res <- StopSignal %>% 
+SST_filtered <- StopSignal %>%
+  filter(RT < 3)
+
+res <- SST_filtered %>% 
   group_by(Part_nr, Stim_verb) %>%
-  group_modify(~ tibble::enframe(fn_scoretidy(.), name = NULL))
+  group_modify(~ tibble::enframe(fn_scoretidy(.), name = NULL)) %>%
+  ungroup()
+
+mean_res <- res %>%
+  group_by(Stim_verb) %>%
+  summarise(SCT = round(mean(value), 2))
+
+# post-hoc t-test
+BF_SCT_20_130 <- ttestBF(formula = value ~ Stim_verb, data = res%>% filter(Stim_verb != "OFF"))
+BF_SCT_20_OFF <- ttestBF(formula = value ~ Stim_verb, data = res%>% filter(Stim_verb != "130Hz"))
+
+
+SCT_20Hz <- res %>%
+  filter(Stim_verb == "20Hz")
+SCT_130Hz <- res %>%
+  filter(Stim_verb == "130Hz")
+SCT_Off <- res %>%
+  filter(Stim_verb == "OFF")
+# Get the corresponding p-value
+t.test(SCT_20Hz$value, SCT_130Hz$value, alternative = "two.sided", var.equal = FALSE)
+t.test(SCT_20Hz$value, SCT_Off$value, alternative = "two.sided", var.equal = FALSE)
+
+
+
 
