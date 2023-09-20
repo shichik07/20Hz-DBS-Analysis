@@ -32,7 +32,6 @@ flankerRT<- read_csv(file = "flanker.csv") %>%
 contrasts(flankerRT$StimCon)
 
 
-
 # create a contrast matrix for our comparisons of interest
 # Contrasts only for the list-wide effect only
 flanker_Contrast <- hypr(
