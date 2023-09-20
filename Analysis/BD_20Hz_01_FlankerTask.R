@@ -190,6 +190,8 @@ fit_log_flanker <- brm(formula = m1_flanker_log,
                       chains =4)
 
 save(fit_log_flanker, file = "E:/20Hz/Data/Modelle/log_reg_flanker.rda")
+load(file = "E:/20Hz/Data/Modelle/log_reg_flanker.rda")
+
 
 # posteriro predictive checks
 pp_check(fit_log_flanker, ndraws = 11, type = "hist")
