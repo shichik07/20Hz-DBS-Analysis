@@ -324,7 +324,7 @@ pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", 
 
 warp_em2 <- emmeans(fit_log_flanker2, ~ Stim_verb|GoNoGo, epred = TRUE)
 cont2 <- contrast(regrid(warp_em2, transform = "response"), interaction = "pairwise")
-summary(cont2, type = "response", point.est = mean)
+sum_acc <- summary(cont2, type = "response", point.est = mean)
 #summary(cont2, type = "response", point.est = median)
 #pairs(warp_em2, simple = "Stim_verb", point.est = mean)
 
