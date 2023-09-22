@@ -208,20 +208,26 @@ mean_res <- res %>%
   group_by(Stim_verb) %>%
   summarise(SCT = round(mean(value), 2))
 
-# post-hoc t-test
-BF_SCT_20_130 <- ttestBF(formula = value ~ Stim_verb, data = res%>% filter(Stim_verb != "OFF"))
-BF_SCT_20_OFF <- ttestBF(formula = value ~ Stim_verb, data = res%>% filter(Stim_verb != "130Hz"))
-
-
 SCT_20Hz <- res %>%
-  filter(Stim_verb == "20Hz")
+  filter(Stim_verb == "20Hz") %>%
+  arrange(Part_nr)
 SCT_130Hz <- res %>%
-  filter(Stim_verb == "130Hz")
+  filter(Stim_verb == "130Hz")%>%
+  arrange(Part_nr)
 SCT_Off <- res %>%
-  filter(Stim_verb == "OFF")
+  filter(Stim_verb == "OFF")%>%
+  arrange(Part_nr)
+SCT_20Hz$value - SCT_130Hz$value
+
+# post-hoc t-test
+BF_SCT_20_130 <- ttestBF(SCT_20Hz$value - SCT_130Hz$value)
+BF_SCT_20_OFF <- ttestBF(SCT_20Hz$value - SCT_Off$value)
+
+
+
 # Get the corresponding p-value
-t.test(SCT_20Hz$value, SCT_130Hz$value, alternative = "two.sided", var.equal = FALSE)
-t.test(SCT_20Hz$value, SCT_Off$value, alternative = "two.sided", var.equal = FALSE)
+t.test(SCT_20Hz$value - SCT_130Hz$value, alternative = "two.sided")
+t.test(SCT_20Hz$value - SCT_Off$value, alternative = "two.sided")
 
 
 
