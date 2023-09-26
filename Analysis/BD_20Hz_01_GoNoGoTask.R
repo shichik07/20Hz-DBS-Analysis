@@ -179,6 +179,28 @@ post_eff <- fit_shifted_log_GoNoGo %>%
   summarise_draws(mean, median, sd, ~quantile(.x, probs = c(0.025, 0.975)))
 
 
+# first calculate the estimated marginal means
+emm_GNG_RT <- emmeans(fit_shifted_log_GoNoGo, specs = ~ Contrast_F, epred = TRUE)
+
+# define new contrasts for emmeans - there should be an easier way to this
+S130Hz_NoGo_Go <- c(1, 0, 0, 0, 0, 0)
+S130Hz_Go <- c(0, 1, 0, 0, 0, 0)
+SOFF_Go <- c(0, 0, 1, 0, 0, 0)
+SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0)
+S20Hz_NoGo_Go <- c(0, 0, 0, 0, 1, 0)
+S20Hz_Go <- c(0, 0, 0, 0, 0, 1)
+
+# and contrasts for the differences in Go effects
+GoDiff_S20_vs_S130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
+GoDiff_S20_vs_SOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
+
+# Next we calculate the contrasts of interest from these marginal means
+contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz_NoGo_Go - S130Hz_Go,
+                                   "S20Hz_NoGo_Go - S20Hz_Go" = S20Hz_NoGo_Go - S20Hz_Go,
+                                   "SOFFHz_NoGo_Go - SOFFHz_Go" = SOFF_NoGo_Go - SOFF_Go,
+                                   "GoDiff_S20_vs_S130" = GoDiff_S20_vs_S130,
+                                   "GoDiff_S20_vs_SOFF" = GoDiff_S20_vs_SOFF)) 
+
 
 # alright, we see participants definitely slowed more in the 20Hz condition compared to the OFF state, there is
 # some indication that this may also be the case for the parameter estimate of the 20 vs. 130 Hz stim condition
@@ -324,6 +346,16 @@ pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", 
 
 warp_em2 <- emmeans(fit_log_flanker2, ~ Stim_verb|GoNoGo, epred = TRUE)
 cont2 <- contrast(regrid(warp_em2, transform = "response"), interaction = "pairwise")
+
+# we need to rework the brms object to a grid object
+prior_mod <- unupdate(fit_log_flanker2)
+prior_emmgrid <- emmeans(prior_mod, ~ Stim_verb|GoNoGo)
+
+# then we can estimate the Bayesfactor
+bayesfactor_parameters(cont2, prior = prior_emmgrid)
+
+
+
 sum_acc <- summary(cont2, type = "response", point.est = mean)
 #summary(cont2, type = "response", point.est = median)
 #pairs(warp_em2, simple = "Stim_verb", point.est = mean)
