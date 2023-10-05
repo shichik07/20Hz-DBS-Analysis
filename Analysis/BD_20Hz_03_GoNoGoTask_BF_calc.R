@@ -96,18 +96,24 @@ Bayes_factor_calc <- function(Liklihoods, param){
 }
 
 
-load_part_mod <- function(loc, model_t, item_type, effect, parameter){
-  string <- loc
-  if (model_t == "RT"){
-    string <- file.path(string, "fit_shifted")
-  } else if (model_t == "Acc"){
-    string <- file.path(string, "fit")
-  }
-  string <- paste(string, item_type , parameter,sep = "_")
+load_part_mod <- function(ana, model_t, parameter){
+  # loads the partial model
+  #
+  # Args:
+  #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
+  #   model_t: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: indicates which parameter the model should be lacking and depends on ana
+  # Returns:
+  #   The specified load model with generically renamed as fit_model
+  string <- paste(ana, model_t, ana, parameter, sep = "_")
   fit <- load(paste(string, ".rda", sep =""))
   fit_model <- eval(parse(text = fit)) # rename the model
   return(fit_model)
 }
+
+#ana <- "GNG"
+#model_t <-  "RT"
+#parameter <-  "min_GoDiff_20vOFF"
 
 load_full_mod <- function(loc, model_t, item_type, effect){
   string <- loc
