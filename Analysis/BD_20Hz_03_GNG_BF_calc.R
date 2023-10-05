@@ -25,10 +25,10 @@ logsum <- function(l1, l2){
   # this is possible with this function. Source:
   # https://stats.stackexchange.com/questions/379335/adding-very-small-probabilities-how-to-compute
   # Args:
-  #   l1: log of likelihood 1
-  #   l2: log of likelihood 2
+  #   l1: log of likelihood 1 (numeric)
+  #   l2: log of likelihood 2 (numeric)
   # Returns:
-  #   the sum of the two likelihoods
+  #   the sum of the two likelihoods (numeric)
   
   max(l1,l2) + log1p(exp(-abs(l1-l2)))
 }
@@ -41,12 +41,12 @@ Bayes_factor_calc <- function(Likelihoods, param, ana){
   #   Likelihoods: tibble containing likelihoods for all models
   #   param: parameter we want to calculate BF for
   # Returns:
-  #   Bayes Factor for the specified parameter
+  #   Bayes Factor (numeric) for the specified parameter
   sub_param <- paste(ana, "min", param, sep = "_")
-    mod_with <- Liklihoods %>%
-      filter(Model == full) %>%
+    mod_with <- Likelihoods %>%
+      filter(Model == "full") %>%
       pull(Log_lik)
-    mod_without <-  Liklihoods %>%
+    mod_without <-  Likelihoods %>%
       filter(Model == sub_param) %>%
       pull(Log_lik) 
   
@@ -58,11 +58,12 @@ load_part_mod <- function(loc, ana, model_t, param){
   # loads the partial model
   #
   # Args:
+  #   loc: string of file location where the partial model is saved
   #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
   #   model_t: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
-  #   parameter: indicates which parameter the model should be lacking and depends on ana
+  #   parameter: string indicating which parameter the model should be lacking and depends on ana
   # Returns:
-  #   The specified load model with generically renamed as fit_model
+  #   The specified loaded model (brmsfit) with generically renamed as fit_model
   string <- paste(ana, model_t, param, sep = "_")
   fit <- load(file.path(loc, paste(string, ".rda", sep ="")))
   fit_model <- eval(parse(text = fit)) # rename the model
@@ -75,11 +76,11 @@ load_full_mod <- function(loc, ana, model_t){
   # loads the partial model
   #
   # Args:
-  #   loc: file location where the full model is saved
+  #   loc: string of file location where the full model is saved
   #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
   #   model_t: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
   # Returns:
-  #   The specified load model with generically renamed as fit_model
+  #   The specified loaded model (brmsfit) with generically renamed as fit_model
 
   if (model_t == "RT"){ 
     string <- file.path(loc, paste("shifted_log", ana, sep = "_"))
@@ -103,19 +104,27 @@ ana <- "GNG"
 model_t <- "RT"
 
 BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
+  # calculates the Bayes for all models
+  #
+  # Args:
+  #   fullmod_loc: string of file location where the full model is saved
+  #   part_mod_loc: string of file location where the partial model is saved
+  #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
+  #   model_t: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: vector with parameter names as strings
+  # Returns:
+  #   a tibble containing the BFs and parameter names
+  
   # tibble to save the data
   Model_BF <- tibble(
     Model = character(),
-    Item_type = character(),
-    Effect = character(),
-    Group = character(),
     Parameter = character(),
     BF = numeric(),
   )
   
-  print(paste("Analyzing the", eff, "effect for the", itm, "items of the", model_type, "data"))
+  #print(paste("Analyzing the", eff, "effect for the", itm, "items of the", model_type, "data"))
   # tibble to save the likelihood values
-  Liklihoods <- tibble(
+  Likelihoods <- tibble(
     Model = character(),
     Log_lik = numeric()
   )
@@ -131,7 +140,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   full_mod_loglik <- bridge_sampler(full_mod, silent = TRUE)
   temp_t <- tibble(Model = "full",
                    Log_lik = full_mod_loglik$logml)
-  Liklihoods <- bind_rows(Liklihoods,temp_t)
+  Likelihoods <- bind_rows(Likelihoods,temp_t)
   
   # now we load the partial models
   for (par in submodel){
@@ -144,19 +153,17 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
     def_mod_loglik <- bridge_sampler(def_mod, silent = TRUE)
     temp_t <- tibble(Model = par,
                      Log_lik = def_mod_loglik$logml)
-    Liklihoods <- bind_rows(Liklihoods,temp_t)
+    Likelihoods <- bind_rows(Likelihoods,temp_t)
   }
   # now use the log-likelihoods to calculate the Bayes inclusion factor
   for (params in parameter){
     print(params)
-    BF <- Bayes_factor_calc(Liklihoods = Liklihoods,
-                            param = params)
+    BF <- Bayes_factor_calc(Likelihoods = Likelihoods,
+                            param = params,
+                            ana = ana)
     #save results as a tibble
     temp <- tibble(
-      Model = model_type,
-      Item_type = itm,
-      Effect = eff,
-      Group = substr(params, start = 1, stop = 2),
+      Model = ana,
       Parameter = substr(params, start = 4, stop = nchar(params)),
       BF = BF,
     )
