@@ -1,9 +1,9 @@
 #####
 # Author: Julius Kricheldorff
-# Analysis Behavioral Data Errors - Load and Calculate Models for BF Analysis
-
+# Load models and calculate Bayes Factors for model components in the Go-NoGo task
+# Date 05.10.2023
 ####
-setwd('E:/AdaptiveControl/Data/BehaviorResults')
+setwd('E:/20Hz/Data/Modelle/BF_mods')
 
 # Load packages
 library(brms)
@@ -16,8 +16,6 @@ library(StanHeaders)
 library(rstudioapi)
 library(xtable)
 
-
-#library(chkptstanr) #package to interupt and restart sampling with stanr/brmslibrary(posterior)
 
 # Set a seed for sake of reproducibility
 set.seed(32936)
@@ -60,14 +58,7 @@ logsum <- function(l1, l2){
   max(l1,l2) + log1p(exp(-abs(l1-l2)))
 }
 
-a <- exp(-58106) + exp(-50001)
-log(a)
-b <- logsum(-137977,-137571)
-c <- logsum(-137862,-137574)
-exp(c-b)
-exp(-137862 - (-137571))
-
-Bayes_inclusion_factor_matched <- function(Liklihoods, param){
+Bayes_factor_calc <- function(Liklihoods, param){
   # function to calculate bayes inclusion factor across matched models
   Group_var = substr(param,1,2)
   if(grepl("IS_Block|LW_Block", param)){
@@ -296,7 +287,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc){
         # now use the logliklihoods to calculate the bayes inclusion factor
         for (params in parameter){
           print(params)
-          BF <- Bayes_inclusion_factor_matched(Liklihoods = Liklihoods, 
+          BF <- Bayes_factor_calc(Liklihoods = Liklihoods, 
                                                param = params)
           #save results as a tibble
           temp <- tibble(
