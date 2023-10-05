@@ -111,25 +111,24 @@ load_part_mod <- function(ana, model_t, parameter){
   return(fit_model)
 }
 
-#ana <- "GNG"
-#model_t <-  "RT"
-#parameter <-  "min_GoDiff_20vOFF"
 
-load_full_mod <- function(loc, model_t, item_type, effect){
-  string <- loc
-  #load the RT model - i messed up in the naming a bit here
+
+load_full_mod <- function(loc, ana, model_t){
+  # loads the partial model
+  #
+  # Args:
+  #   loc: file location where the full model is saved
+  #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
+  #   model_t: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  # Returns:
+  #   The specified load model with generically renamed as fit_model
+
   if (model_t == "RT"){ 
-    string <- file.path(string, "fit_inducer_model")
-    string <- paste(string, effect, sep = "_")
-    if (item_type == "diagnostic"){
-      string <- paste(string, "Diagnostics", sep = "_")
-    }
-    fit <- load(paste(string, ".rda", sep =""))
+    string <- file.path(loc, paste("shifted_log", ana, sep = "_"))
   } else if (model_t == "Acc"){
-    string <- file.path(string, "fit_logisticMod")
-    string <- paste(string, item_type , effect,sep = "_")
-    fit <- load(paste(string, ".rda", sep =""))
+    string <- file.path(loc, paste("log_reg", ana, sep = "_"))
   }
+  fit <- load(paste(string, ".rda", sep =""))
   fit_model <- eval(parse(text = fit)) # rename the model
   return(fit_model)
 }
