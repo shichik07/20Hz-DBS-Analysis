@@ -22,7 +22,7 @@ library(BayesFactor)
 setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
-StopSignal<- read_csv(file = "StoppSignal.csv") %>%
+SST<- read_csv(file = "StoppSignal.csv") %>%
   mutate(Error = 1 - Correct_Response) %>%
   mutate(StimCon = as_factor(case_when(
     Stim_verb == "130Hz" ~ "S130Hz",
@@ -31,7 +31,7 @@ StopSignal<- read_csv(file = "StoppSignal.csv") %>%
     
   )))
 
-StopSignal <- StopSignal %>%
+SST <- SST %>%
   mutate(Contrast_F = as_factor(case_when(
     Stim_verb == "130Hz" & StopTrl == "Go" ~ "S130Hz_Go",
     Stim_verb == "130Hz" & StopTrl == "Stop" ~ "S130Hz_Stop",
@@ -41,19 +41,19 @@ StopSignal <- StopSignal %>%
     Stim_verb == "OFF" & StopTrl == "Stop" ~ "SOFF_Stop",
   )))
 
-StopSignal_Error <- StopSignal %>%
+SST_Error <- SST %>%
   filter(StopTrl == "Go")
 
 # for the RT analysis we filter only correct trials, and exclude trials shorter 
 # than 200ms a longer than 2s
-RT_data <- StopSignal %>%
+RT_data <- SST %>%
   filter(Correct_Response == 1,
          RT <3,
          RT > 0.2,
          StopTrl == "Go") %>%
   mutate(RT_ms = RT*1000)
 
-RT_data2 <-  StopSignal %>%
+RT_data2 <-  SST %>%
   filter(Correct_Response == 1,
          StopTrl == "Go") %>%
   mutate(RT_ms = RT*1000)
@@ -75,46 +75,53 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object List Wide
-m1_StopT <- bf(RT_ms ~ 1  + StimCon + (StimCon|Part_nr))
+m1_SST <- bf(RT_ms ~ 1  + StimCon + (StimCon|Part_nr))
 
-#get_prior(formula = m1_StopT, data = RT_data, family = shifted_lognormal())
+#get_prior(formula = m1_SST, data = RT_data, family = shifted_lognormal())
 
 #fit the first model
-fit_shifted_log_StopT <- brm(formula = m1_StopT,
+fit_shifted_log_SST <- brm(formula = m1_SST,
                            family = shifted_lognormal(),
                            data = RT_data,
                            prior = prior_weakly_informed,
-                           warmup = 2000,
-                           iter = 12000,# 20000 is the limit necessary for bridge sampling
+                           warmup = 200,
+                           iter = 1200,# 20000 is the limit necessary for bridge sampling
                            cores = 4, seed = 423,
                            #control = list(adapt_delta = 0.9),
                            save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                            chains =4
 )
 
-save(fit_shifted_log_StopT, file = "E:/20Hz/Data/Modelle/shifted_log_StopT.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_StopT.rda")
+save(fit_shifted_log_SST, file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
 
 # Next check how well the posteriors fit the actual data
 
 # posteriro predictive checks
-pp_check(fit_shifted_log_StopT, ndraws = 11, type = "hist")
+pp_check(fit_shifted_log_SST, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_shifted_log_StopT, ndraws = 100, type = "dens_overlay")
+pp_check(fit_shifted_log_SST, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_shifted_log_StopT, type = "boxplot", ndraws = 10)
+pp_check(fit_shifted_log_SST, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_StopT, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_shifted_log_SST, ndraws = 1000, type = "stat", stat = "mean")
 # looks really good
-pp_check(fit_shifted_log_StopT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
+pp_check(fit_shifted_log_SST, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
 # somewhat resonable
-pp_check(fit_shifted_log_StopT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
+pp_check(fit_shifted_log_SST, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
 
 # Lastly use emmeans to get the contrasts
+prior_sum <- prior_summary(fit_shifted_log_SST)
 
-warp_em2 <- emmeans(fit_shifted_log_StopT, ~ StimCon, epred = TRUE)
-cont2 <- contrast(regrid(warp_em2, transform = "response"), interaction = "pairwise")
-summary(cont2, type = "response", point.est = mean)
+warp_em2 <- pairs(emmeans(fit_shifted_log_SST, ~ StimCon))
+
+# we need to rework the brms object to a grid object
+prior_mod <- unupdate(fit_shifted_log_SST)
+prior_emmgrid <- emmeans(prior_mod, ~ StimCon)
+
+# then we can estimate the Bayesfactor
+bayesfactor_parameters(cont2, prior = prior_emmgrid)
+
 
 ## Next, let us look at the accuracy data
 
@@ -137,7 +144,7 @@ m1_SRT_log <- bf(Error ~ 1  + StimCon + (StimCon|Part_nr))
 # we should consider varying non-decision times between the groups
 fit_logReg_SST <- brm(formula = m1_SRT_log,
                       family = bernoulli(link = logit),
-                      data = StopSignal_Error,
+                      data = SST_Error,
                       prior = prior_weakly_informed_logreg,
                       warmup = 2000,
                       iter = 12000,# 20000 is the limit necessary for bridge sampling
@@ -145,8 +152,8 @@ fit_logReg_SST <- brm(formula = m1_SRT_log,
                       save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                       chains =4)
 
-save(fit_logReg_SST, file = "E:/20Hz/Data/Modelle/logreg_StopT.rda")
-load(file = "E:/20Hz/Data/Modelle/logreg_StopT.rda")
+save(fit_logReg_SST, file = "E:/20Hz/Data/Modelle/logreg_SST.rda")
+load(file = "E:/20Hz/Data/Modelle/logreg_SST.rda")
 # posteriro predictive checks
 pp_check(fit_logReg_SST, ndraws = 11, type = "hist")
 # Looks good for this model
@@ -196,7 +203,7 @@ fn_scoretidy <- function(.data) {
   return(round(rt_quantile - mean_ssd))
 }
 
-SST_filtered <- StopSignal %>%
+SST_filtered <- SST %>%
   filter(RT < 3)
 
 res <- SST_filtered %>% 

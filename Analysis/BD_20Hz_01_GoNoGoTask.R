@@ -122,7 +122,7 @@ m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
 #get_prior(formula =  m1_GoNoGo_shift, data = RT_data, family = shifted_lognormal())
 
 #fit the first model
-fit_shifted_log_GoNoGo <- brm(formula = m1_GoNoGo_shift,
+fit_shifted_log_GNG <- brm(formula = m1_GoNoGo_shift,
                                family = shifted_lognormal(),
                                data = RT_data,
                                prior = prior_weakly_informed,
@@ -134,28 +134,28 @@ fit_shifted_log_GoNoGo <- brm(formula = m1_GoNoGo_shift,
                                chains =4
 )
 
-save(fit_shifted_log_GoNoGo, file = "E:/20Hz/Data/Modelle/shifted_log_GoNoGo.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_GoNoGo.rda")
+save(fit_shifted_log_GNG, file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
 
 # posteriro predictive checks
-pp_check(fit_shifted_log_GoNoGo, ndraws = 11, type = "hist")
+pp_check(fit_shifted_log_GNG, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_shifted_log_GoNoGo, ndraws = 100, type = "dens_overlay")
+pp_check(fit_shifted_log_GNG, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_shifted_log_GoNoGo, type = "boxplot", ndraws = 10)
+pp_check(fit_shifted_log_GNG, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_GoNoGo, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat", stat = "mean")
 # looks really good
-pp_check(fit_shifted_log_GoNoGo, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
+pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
 # somewhat resonable
-pp_check(fit_shifted_log_GoNoGo, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
+pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
 
 # Great, the model looks good. Lets see the effect sizes, 
 
 # first get variable names
-get_variables(fit_shifted_log_GoNoGo)
+get_variables(fit_shifted_log_GNG)
 
-post_eff <- fit_shifted_log_GoNoGo %>%
+post_eff <- fit_shifted_log_GNG %>%
   spread_draws(b_Intercept, b_Contrast_FGo_NoGo_Go, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
                b_Contrast_FGoDiff_20v130, b_Contrast_FGoDiff_20vOFF, sigma, ndt) %>%
   mutate(Est_S130_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
@@ -180,7 +180,7 @@ post_eff <- fit_shifted_log_GoNoGo %>%
 
 
 # first calculate the estimated marginal means
-emm_GNG_RT <- emmeans(fit_shifted_log_GoNoGo, specs = ~ Contrast_F, epred = TRUE)
+emm_GNG_RT <- emmeans(fit_shifted_log_GNG, specs = ~ Contrast_F, epred = TRUE)
 
 # define new contrasts for emmeans - there should be an easier way to this
 S130Hz_NoGo_Go <- c(1, 0, 0, 0, 0, 0)
@@ -297,7 +297,7 @@ contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz_NoGo_Go
 #get_prior(formula = m1_GoNoGo_log2, data = GoNoGo, family = bernoulli(link = logit))
 
 prior_weakly_informed_logreg2<- c(
-  prior(normal(-0.6, 0.6), class = Intercept),
+  prior(normal(-2, 1), class = Intercept),
   prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMGo), 
   prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMStop),
   prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz), 
@@ -309,12 +309,51 @@ prior_weakly_informed_logreg2<- c(
   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
 )
 
+
+#Third Analysis - Here I formulate the contrasts which we are actually interested in - just 20Hz vs other for all response options
+
+GoNoGo_Contrast_Acc <- hypr(
+  Go_Stop_vs_Go = (S20Hz_NoGo_Go + S130Hz_NoGo_Go + SOFF_NoGo_Go)/3 ~ (S20Hz_Go + S130Hz_Go + SOFF_Go)/3,
+  Go_Stop_vs_Stop = (S20Hz_NoGo_Go + S130Hz_NoGo_Go + SOFF_NoGo_Go)/3 ~ (S20Hz_NoGo_Stop + S130Hz_NoGo_Stop + SOFF_NoGo_Stop)/3,
+  NoGo_Stop_20Hz_vs_130Hz = S20Hz_NoGo_Stop ~ S130Hz_NoGo_Stop,
+  NoGo_Stop_20Hz_vs_OFF = S20Hz_NoGo_Stop ~ SOFF_NoGo_Stop,
+  NoGo_Go_20Hz_vs_130Hz = S20Hz_NoGo_Go ~ S130Hz_NoGo_Go,
+  NoGo_Go_20Hz_vs_OFF = S20Hz_NoGo_Go ~ SOFF_NoGo_Go,
+  Go_20Hz_vs_130Hz = S20Hz_Go ~ S130Hz_Go,
+  Go_20Hz_vs_OFF = S20Hz_Go ~ SOFF_Go,
+  levels = c("S130Hz_NoGo_Stop", "S130Hz_NoGo_Go", "S130Hz_Go", 
+             "SOFF_Go", "SOFF_NoGo_Stop", "SOFF_NoGo_Go", 
+             "S20Hz_NoGo_Stop", "S20Hz_NoGo_Go", "S20Hz_Go")
+)
+
+GoNoGo_Contrast_Acc
+
+contrasts(GoNoGo$Contrast_F) <- contr.hypothesis(GoNoGo_Contrast_Acc)
+contrasts(GoNoGo$Contrast_F)
+
 # brmsformula object Item Specific
-m1_GoNoGo_log2 <- bf(Error ~ 1  + Stim_verb*GoNoGo + (Stim_verb*GoNoGo|Part_nr)) 
+m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
+m1_GoNoGo_log <- bf(Error ~ 1  + Stim_verb * GoNoGo + (Stim_verb * GoNoGo|Part_nr)) 
+
+#get_prior(formula =  m1_GoNoGo_log, data = GoNoGo, family = bernoulli(link = logit))
+
+prior_weakly_informed_logreg2<- c(
+  prior(normal(-2, 1), class = Intercept),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FGo_Stop_vs_Go),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FGo_Stop_vs_Stop),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Stop_20Hz_vs_130Hz),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Stop_20Hz_vs_OFF),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Go_20Hz_vs_130Hz), 
+  prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Go_20Hz_vs_OFF),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FGo_20Hz_vs_130Hz), 
+  prior(normal(0,  1.5), class = b, coef = Contrast_FGo_20Hz_vs_OFF),
+  prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
+)
+
 
 
 # we should consider varying non-decision times between the groups
-fit_log_flanker2 <- brm(formula = m1_GoNoGo_log2,
+fit_log_flanker2 <- brm(formula = m1_GoNoGo_log,
                        family = bernoulli(link = logit),
                        data = GoNoGo,
                        prior = prior_weakly_informed_logreg2,
@@ -324,8 +363,8 @@ fit_log_flanker2 <- brm(formula = m1_GoNoGo_log2,
                        save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                        chains =4)
 
-save(fit_log_flanker2, file = "E:/20Hz/Data/Modelle/log_reg_GoNoGo2.rda")
-load(file = "E:/20Hz/Data/Modelle/log_reg_GoNoGo2.rda")
+save(fit_log_flanker2, file = "E:/20Hz/Data/Modelle/log_reg_GNG.rda")
+load(file = "E:/20Hz/Data/Modelle/log_reg_GNG.rda")
 
 # posteriro predictive checks
 pp_check(fit_log_flanker2, ndraws = 11, type = "hist")
@@ -336,6 +375,7 @@ pp_check(fit_log_flanker2, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
 pp_check(fit_log_flanker2, ndraws = 1000, type = "stat", stat = "mean")
 # looks good
+pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
 pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Stim_verb")
 # looks good
 pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "GoNoGo")
@@ -345,14 +385,18 @@ pp_check(fit_log_flanker2, ndraws = 1000, type = "stat_grouped", stat = "mean", 
 
 
 warp_em2 <- emmeans(fit_log_flanker2, ~ Stim_verb|GoNoGo, epred = TRUE)
-cont2 <- contrast(regrid(warp_em2, transform = "response"), interaction = "pairwise")
+warp_em3 <- emmeans(fit_log_flanker2, ~ Contrast_F, epred = TRUE)
+cont2 <- contrast(regrid(warp_em3, transform = "response"), interaction = "pairwise")
 
 # we need to rework the brms object to a grid object
 prior_mod <- unupdate(fit_log_flanker2)
-prior_emmgrid <- emmeans(prior_mod, ~ Stim_verb|GoNoGo)
+prior_emmgrid <- emmeans(prior_mod, ~ Contrast_F, epred = TRUE)
 
 # then we can estimate the Bayesfactor
 bayesfactor_parameters(cont2, prior = prior_emmgrid)
+mod <- ref_grid(fit_log_flanker2)
+prior_mod <- update(prior_weakly_informed_logreg2, prior_PD = TRUE)
+bayesfactor_parameters(pairs(mod), prior =)
 
 
 

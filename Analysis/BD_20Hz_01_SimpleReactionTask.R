@@ -15,6 +15,7 @@ library(readr)
 library(brms)
 library(hypr)
 library(tiybayes)
+library(bayestestR)
 
 # set directory
 setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
@@ -30,15 +31,15 @@ SimpleRT<- read_csv(file = "SimpleRT.csv") %>%
   )))
 # create a contrast matrix for our comparisons of interest
 # Contrasts only for the list-wide effect only
-SST_Contrast <- hypr(
+SRT_Contrast <- hypr(
   S130_S20 = S20Hz ~ S130Hz, 
   S20_SOFF = S20Hz ~ SOFF, 
   levels = c("S130Hz", "SOFF", "S20Hz")
 )
-SST_Contrast
+SRT_Contrast
 
 # assign the generated contrast matrix to the List Wide Factor
-contrasts(SimpleRT$StimCon) <- contr.hypothesis(SST_Contrast)
+contrasts(SimpleRT$StimCon) <- contr.hypothesis(SRT_Contrast)
 contrasts(SimpleRT$StimCon)   
 
 
@@ -74,7 +75,7 @@ m1_SRT <- bf(RT_ms ~ 1  + StimCon + (StimCon|Part_nr))
 #get_prior(formula = m1_SRT, data = RT_data, family = shifted_lognormal())
 
 #fit the first model
-fit_shifted_log_SST <- brm(formula = m1_SRT,
+fit_shifted_log_SRT <- brm(formula = m1_SRT,
                   family = shifted_lognormal(),
                   data = RT_data,
                   prior = prior_weakly_informed,
@@ -86,27 +87,27 @@ fit_shifted_log_SST <- brm(formula = m1_SRT,
                   chains =4
 )
 
-save(fit_shifted_log_SST, file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_SST.rda")
+save(fit_shifted_log_SRT, file = "E:/20Hz/Data/Modelle/shifted_log_SRT.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_SRT.rda")
 
 # posteriro predictive checks
-pp_check(fit_shifted_log_SST, ndraws = 11, type = "hist")
+pp_check(fit_shifted_log_SRT, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_shifted_log_SST, ndraws = 100, type = "dens_overlay")
+pp_check(fit_shifted_log_SRT, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_shifted_log_SST, type = "boxplot", ndraws = 10)
+pp_check(fit_shifted_log_SRT, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_SST, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_shifted_log_SRT, ndraws = 1000, type = "stat", stat = "mean")
 # looks good
-pp_check(fit_shifted_log_SST, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
+pp_check(fit_shifted_log_SRT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
 # looks good
 
 # Great, the model looks perfect. Lets see the effect sizes, 
 
 # first get variable names
-get_variables(fit_shifted_log_SST)
+get_variables(fit_shifted_log_SRT)
 
-post_eff <- fit_shifted_log_SST %>%
+post_eff <- fit_shifted_log_SRT %>%
   spread_draws(b_Intercept, b_StimConS20_SOFF, b_StimConS130_S20, sigma, ndt) %>%
   mutate(Est_S130Hz = exp(b_Intercept + (-(2/3))*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF) + sigma/2 + ndt,
          Est_S20Hz = exp(b_Intercept + (1/3)*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF) + sigma/2 + ndt,
@@ -137,7 +138,7 @@ m1_SRT_log <- bf(Error ~ 1  + StimCon + (StimCon|Part_nr))
 
 
 # we should consider varying non-decision times between the groups
-fit_logReg_SST <- brm(formula = m1_SRT_log,
+fit_logReg_SRT <- brm(formula = m1_SRT_log,
                                   family = bernoulli(link = logit),
                                   data = SimpleRT,
                                   prior = prior_weakly_informed_logreg,
@@ -147,24 +148,24 @@ fit_logReg_SST <- brm(formula = m1_SRT_log,
                                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                                   chains =4)
 
-save(fit_logReg_SST, file = "E:/20Hz/Data/Modelle/logreg_SST.rda")
-load(file = "E:/20Hz/Data/Modelle/logreg_SST.rda")
+save(fit_logReg_SRT, file = "E:/20Hz/Data/Modelle/logreg_SRT.rda")
+load(file = "E:/20Hz/Data/Modelle/logreg_SRT.rda")
 # posteriro predictive checks
-pp_check(fit_logReg_SST, ndraws = 11, type = "hist")
+pp_check(fit_logReg_SRT, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_logReg_SST, ndraws = 100, type = "dens_overlay")
+pp_check(fit_logReg_SRT, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_logReg_SST, type = "boxplot", ndraws = 10)
+pp_check(fit_logReg_SRT, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_logReg_SST, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_logReg_SRT, ndraws = 1000, type = "stat", stat = "mean")
 # looks good
-pp_check(fit_logReg_SST, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
+pp_check(fit_logReg_SRT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
 # looks good
 
 # first get variable names
-get_variables(fit_logReg_SST)
+get_variables(fit_logReg_SRT)
 
-post_eff_log_SST <- fit_logReg_SST %>%
+post_eff_log_SRT <- fit_logReg_SRT %>%
   spread_draws(b_Intercept, b_StimConS20_SOFF, b_StimConS130_S20) %>%
   mutate(Est_S130Hz = plogis(b_Intercept + (-(2/3))*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF),
          Est_S20Hz = plogis(b_Intercept + (1/3)*b_StimConS130_S20 + (1/3)*b_StimConS20_SOFF),

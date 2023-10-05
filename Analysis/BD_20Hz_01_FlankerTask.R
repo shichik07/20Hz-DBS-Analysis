@@ -20,7 +20,7 @@ library(tidybayes)
 setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
-flankerRT<- read_csv(file = "flanker.csv") %>%
+FLTRT<- read_csv(file = "flanker.csv") %>%
   mutate(Error = 1 - Correct_Response) %>%
   mutate(StimCon = as_factor(case_when(
     Stim_verb == "130Hz" ~ "S130Hz",
@@ -29,12 +29,12 @@ flankerRT<- read_csv(file = "flanker.csv") %>%
     
   )))
 
-contrasts(flankerRT$StimCon)
+contrasts(FLTRT$StimCon)
 
 
 # create a contrast matrix for our comparisons of interest
 # Contrasts only for the list-wide effect only
-flanker_Contrast <- hypr(
+FLT_Contrast <- hypr(
   Congruency = (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3,
   Stim_20v130 = (S20Hz_incongruent + S20Hz_congruent)/2 ~ (S130Hz_incongruent + S130Hz_congruent)/2,
   Stim_20vOFF = (S20Hz_incongruent + S20Hz_congruent)/2 ~ (SOFF_incongruent + SOFF_congruent)/2,
@@ -44,11 +44,11 @@ flanker_Contrast <- hypr(
              "SOFF_incongruent", "S20Hz_incongruent", "S20Hz_congruent")
 )
 
-flanker_Contrast
+FLT_Contrast
 
 # create a variable for the contrasts
 
-flankerRT <- flankerRT %>%
+FLTRT <- FLTRT %>%
   mutate(Contrast_F = as_factor(case_when(
     Stim_verb == "130Hz" & Congruency == "congruent" ~ "S130Hz_congruent",
     Stim_verb == "130Hz" & Congruency == "incongruent" ~ "S130Hz_incongruent",
@@ -59,19 +59,19 @@ flankerRT <- flankerRT %>%
   )))
 
 # assign the generated contrast matrix to the List Wide Factor
-contrasts(flankerRT$Contrast_F) <- contr.hypothesis(flanker_Contrast)
-contrasts(flankerRT$Contrast_F)   
+contrasts(FLTRT$Contrast_F) <- contr.hypothesis(FLT_Contrast)
+contrasts(FLTRT$Contrast_F)   
 
 
 # for the RT analysis we filter only correct trials, and exclude trials shorter 
 # than 200ms a longer than 2s
-RT_data <- flankerRT %>%
+RT_data <- FLTRT %>%
   filter(Correct_Response == 1,
          RT <3,
          RT > 0.2) %>%
   mutate(RT_ms = RT*1000)
 
-RT_data2 <-  flankerRT %>%
+RT_data2 <-  FLTRT %>%
   filter(Correct_Response == 1)%>%
   mutate(RT_ms = RT*1000)
 
@@ -92,12 +92,12 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object List Wide
-m1_flanker <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
+m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
 
-#get_prior(formula = m1_flanker, data = RT_data, family = shifted_lognormal())
+#get_prior(formula = m1_FLT, data = RT_data, family = shifted_lognormal())
 
 #fit the first model
-fit_shifted_log_flanker <- brm(formula = m1_flanker,
+fit_shifted_log_FLT <- brm(formula = m1_FLT,
                            family = shifted_lognormal(),
                            data = RT_data,
                            prior = prior_weakly_informed,
@@ -109,28 +109,28 @@ fit_shifted_log_flanker <- brm(formula = m1_flanker,
                            chains =4
 )
 
-save(fit_shifted_log_flanker, file = "E:/20Hz/Data/Modelle/shifted_log_flanker.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_flanker.rda")
+save(fit_shifted_log_FLT, file = "E:/20Hz/Data/Modelle/shifted_log_FLT.rda")
+load(file = "E:/20Hz/Data/Modelle/shifted_log_FLT.rda")
 
 # posteriro predictive checks
-pp_check(fit_shifted_log_flanker, ndraws = 11, type = "hist")
+pp_check(fit_shifted_log_FLT, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_shifted_log_flanker, ndraws = 100, type = "dens_overlay")
+pp_check(fit_shifted_log_FLT, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_shifted_log_flanker, type = "boxplot", ndraws = 10)
+pp_check(fit_shifted_log_FLT, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_flanker, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat", stat = "mean")
 # looks really good
-pp_check(fit_shifted_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
+pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
 # somewhat resonable
-pp_check(fit_shifted_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
+pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
 
 # Great, the model looks good. Lets see the effect sizes, 
 
 # first get variable names
-get_variables(fit_shifted_log_flanker)
+get_variables(fit_shifted_log_FLT)
 
-post_eff <- fit_shifted_log_flanker %>%
+post_eff <- fit_shifted_log_FLT %>%
   spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
                b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF, sigma, ndt) %>%
   mutate(Est_S130_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
@@ -172,15 +172,15 @@ prior_weakly_informed_logreg<- c(
 #get_prior(formula = m1_SRT, data = RT_data, family = bernoulli(link = logit))
 
 # brmsformula object Item Specific
-m1_flanker_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
+m1_FLT_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
 
 #### Fit Inducer Models ####
 
 
 # we should consider varying non-decision times between the groups
-fit_log_flanker <- brm(formula = m1_flanker_log,
+fit_log_FLT <- brm(formula = m1_FLT_log,
                       family = bernoulli(link = logit),
-                      data = flankerRT,
+                      data = FLTRT,
                       prior = prior_weakly_informed_logreg,
                       warmup = 2000,
                       iter = 12000,# 20000 is the limit necessary for bridge sampling
@@ -188,29 +188,29 @@ fit_log_flanker <- brm(formula = m1_flanker_log,
                       save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                       chains =4)
 
-save(fit_log_flanker, file = "E:/20Hz/Data/Modelle/log_reg_flanker.rda")
-load(file = "E:/20Hz/Data/Modelle/log_reg_flanker.rda")
+save(fit_log_FLT, file = "E:/20Hz/Data/Modelle/log_reg_FLT.rda")
+load(file = "E:/20Hz/Data/Modelle/log_reg_FLT.rda")
 
 
 # posteriro predictive checks
-pp_check(fit_log_flanker, ndraws = 11, type = "hist")
+pp_check(fit_log_FLT, ndraws = 11, type = "hist")
 # Looks good for this model
-pp_check(fit_log_flanker, ndraws = 100, type = "dens_overlay")
+pp_check(fit_log_FLT, ndraws = 100, type = "dens_overlay")
 # Looks good for this model
-pp_check(fit_log_flanker, type = "boxplot", ndraws = 10)
+pp_check(fit_log_FLT, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_log_flanker, ndraws = 1000, type = "stat", stat = "mean")
+pp_check(fit_log_FLT, ndraws = 1000, type = "stat", stat = "mean")
 # looks good
-pp_check(fit_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
+pp_check(fit_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
 # looks good
-pp_check(fit_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
+pp_check(fit_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
 
 # first get variable names
-get_variables(fit_log_flanker)
+get_variables(fit_log_FLT)
 
 
 
-post_eff_logreg <- fit_log_flanker %>%
+post_eff_logreg <- fit_log_FLT %>%
   spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
                b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF) %>%
   mutate(Est_S130_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
