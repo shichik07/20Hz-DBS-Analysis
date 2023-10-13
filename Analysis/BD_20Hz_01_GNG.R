@@ -53,7 +53,6 @@ RT_data <- GoNoGo %>%
          GoNoGo == "NoGo - Go" | GoNoGo == "Go") %>%
   mutate(RT_ms = RT*1000) %>%
   droplevels() %>%# drop Stop trials
-  
   mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
          SOFF = ifelse(Stim_verb == "OFF", 1, 0),
          Go_diff =ifelse(GoNoGo == "NoGo - Go", 0.5, -0.5))
@@ -84,7 +83,7 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object RT analysis
-m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Go_diff + S130Hz + SOFF + S130Hz*Go_diff + SOFF*Go_diff + (1 + Go_diff + S130Hz + SOFF |Part_nr))
+m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Go_diff + S130Hz + SOFF + S130Hz*Go_diff + SOFF*Go_diff + (1|Part_nr))
 
 #get_prior(formula =  m1_GoNoGo_shift, data = RT_data, family = shifted_lognormal())
 

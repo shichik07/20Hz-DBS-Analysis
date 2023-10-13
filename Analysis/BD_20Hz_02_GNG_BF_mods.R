@@ -63,13 +63,9 @@ GNG_formulas <- list(
   bf(RT_ms ~ 1 + Go_diff + S130Hz + SOFF + SOFF * Go_diff + (1 | Part_nr)) # no interaction 20Hz vs 130Hz
 )
 
-
-
 # models we assess
 GNG_mods <- c("GNG_min_GoDiff_20vOFF",
              "GNG_min_GoDiff_20v130")
-
-
 
 # Same priors as for the model before
 prior_weakly_informed<- c(
@@ -83,7 +79,6 @@ prior_weakly_informed<- c(
   prior(normal(0,  0.3), class = b, coef = SOFF),
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
-
 
 # okay create a function to pass model parameter
 pass_brms = function(save_name, prior, data, model) {
@@ -109,7 +104,7 @@ for(mods in 1:length(GNG_mods)){
   # get save name for variable
   save_name <- paste("GNG_RT_", GNG_mods[mods], ".rda", sep = "")
   # fit the model
-  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data, model = GNG_formulas[mods])
+  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data, model = GNG_formulas[[mods]])
 } 
 
 #### Now Lets do the same for the accuracy data
