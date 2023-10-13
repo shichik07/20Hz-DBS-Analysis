@@ -15,6 +15,7 @@ library(rstan)# package to generate contrasts
 library(StanHeaders)
 library(rstudioapi)
 library(xtable)
+library(stringr)
 
 
 # Set a seed for sake of reproducibility
@@ -114,11 +115,6 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   full_mod <- load_full_mod(loc = fullmod_loc,
                             model_t = model_t,
                             ana = ana)
-  # calculate the log likelihood
-  full_mod_loglik <- bridge_sampler(full_mod, silent = TRUE)
-  temp_t <- tibble(Model = "full",
-                   Log_lik = full_mod_loglik$logml)
-  Likelihoods <- bind_rows(Likelihoods,temp_t)
   
   # now we load the partial models
   for (par in submodel){
@@ -127,23 +123,15 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
                              ana = ana, 
                              model_t = model_t, 
                              param = par)
-    # calculate the log liklihood
-    def_mod_loglik <- bridge_sampler(def_mod, silent = TRUE)
-    temp_t <- tibble(Model = par,
-                     Log_lik = def_mod_loglik$logml)
-    Likelihoods <- bind_rows(Likelihoods,temp_t)
-  }
-  # now use the log-likelihoods to calculate the Bayes inclusion factor
-  for (params in parameter){
-    print(params)
-    BF <- Bayes_factor_calc(Likelihoods = Likelihoods,
-                            param = params,
-                            ana = ana)
+    
+    #calculate the BF using the brms function for it
+    temp_BF <- bayes_factor(full_mod, def_mod)
+    
     #save results as a tibble
     temp <- tibble(
       Model = ana,
-      Parameter = params,
-      BF = BF,
+      Parameter = str_sub(par, start =9),
+      BF = temp_BF$bf,
     )
     # join tibble as row
     Model_BF <- Model_BF %>%
@@ -153,10 +141,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
 }
 
 fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
-parameter <- c("Go_NoGo_Go", 
-               "Stim_20v130",
-               "Stim_20vOFF",
-               "GoDiff_20v130",
+parameter <- c("GoDiff_20v130",
                "GoDiff_20vOFF")
 
 model<- load_full_mod(fullmod_loc, ana, model_t)
@@ -207,10 +192,7 @@ conditional_effect_calc_shift <- function(model){
 
 fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
 part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
-parameter <- c("Go_NoGo_Go", 
-               "Stim_20v130",
-               "Stim_20vOFF",
-               "GoDiff_20v130",
+parameter <- c("GoDiff_20v130",
                "GoDiff_20vOFF")
 
 ana <- "GNG"
