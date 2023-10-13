@@ -126,29 +126,20 @@ conditional_effect_calc_shift <- function(model){
   
   # get posterior samples to calculate conditional effects
   # first calculate the estimated marginal means
-  emm <- emmeans(model, specs = ~ Contrast_F, epred = TRUE)
+  emm_GNG_RT <- emmeans(model, specs = ~ SOFF*Go_diff +  S130Hz*Go_diff, epred = TRUE)
+  S130Hz_NoGo_Go <- c(0, 0, 0, 0, 0, 0, 1, 0)
+  S130Hz_Go <- c(0, 0, 0, 0, 1, 0, 0, 0)
+  SOFF_Go <- c(0, 1, 0, 0, 0, 0, 0, 0)
+  SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0, 0, 0)
+  S20Hz_NoGo_Go <- c(0, 0, 1, 0, 0, 0, 0, 0)
+  S20Hz_Go <- c(1, 0, 0, 0, 0, 0, 0, 0)
   
-  # define new contrasts for emmeans - there should be an easier way to this
-  S130Hz_NoGo_Go <- c(1, 0, 0, 0, 0, 0)
-  S130Hz_Go <- c(0, 1, 0, 0, 0, 0)
-  SOFF_Go <- c(0, 0, 1, 0, 0, 0)
-  SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0)
-  S20Hz_NoGo_Go <- c(0, 0, 0, 0, 1, 0)
-  S20Hz_Go <- c(0, 0, 0, 0, 0, 1)
-  
-  # and contrasts for the differences in Go effects
-  Go_NoGo_Go <- (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3 - (S130Hz_Go + SOFF_Go + S20Hz_Go)/3
-  Stim_20v130 <- (S20Hz_NoGo_Go + S20Hz_Go)/2 - (S130Hz_NoGo_Go + S130Hz_Go)/2
-  Stim_20vOFF <- (S20Hz_NoGo_Go + S20Hz_Go)/2 - (SOFF_NoGo_Go + SOFF_Go)/2
-  GoDiff_20v130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
-  GoDiff_20vOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
+  GoDiff_S20_vs_S130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
+  GoDiff_S20_vs_SOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
   
   # Next we calculate the contrasts of interest from these marginal means
-  model_effects <- contrast(emm, method = list("Go_NoGo_Go" = Go_NoGo_Go,
-                                     "Stim_20v130" = Stim_20v130,
-                                     "Stim_20vOFF" = Stim_20vOFF,
-                                     "GoDiff_20v130" = GoDiff_20v130,
-                                     "GoDiff_20vOFF" = GoDiff_20vOFF))
+  model_effects <- contrast(emm_GNG_RT, method = list("GoDiff_S20_vs_S130" = GoDiff_S20_vs_S130,
+                                             "GoDiff_S20_vs_SOFF" = GoDiff_S20_vs_SOFF)) 
   return(summary(model_effects))
 }
 
@@ -167,17 +158,17 @@ model_t <- "RT"
 Partial_models_saveloc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
 Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
 
-# calculate BFs
+# calculate BFs for the RT data
 BF_Results <- BF_calc(fullmod_loc = Full_models_saveloc, 
                       part_mod_loc = Partial_models_saveloc, 
                       parameter = parameter, 
                       ana = ana, 
                       model_t = model_t)
 #save data
-write.table(BF_Results , file = "r{E:\20Hz\Data\Modelle\BF_Results.csv}")
+write.table(BF_Results , file = "E:/20Hz/Data/Modelle/BF_Results_RT.csv")
 
 # load data again
-BF_Results <- read.csv(file = "r{E:\20Hz\Data\Modelle\BF_Results.csv}", header = TRUE, sep = "")
+BF_Results <- read.csv(file = "E:/20Hz/Data/Modelle/BF_Results_RT.csv", header = TRUE, sep = "")
 #### Now that we have the table with our BFs, let us load the parameter estimates
 
 # New Tibble
@@ -203,80 +194,11 @@ for (md in mods) {
       } else if (md == "Acc"){
         eff_post <- conditional_effect_calc_acc(model = full_model)
       }
-      #translate into summary stats
-      sum_t <- post_sum_calc(eff_post)
       
       #integrate summary stats into BF table
-      
-      temp_t <- sum_t %>% filter(!grepl("Stroop", parameter)) # filter the stroop effects which we are not interested in to show
-      for (vars in temp_t$parameter){
-        group_in <- substr(vars, start = nchar(vars)-1, stop = nchar(vars))
-        
-        #NOTE: by accident when i created the models for the BF calculation, also the models
-        # get a single row
-        row_var <- sum_t %>% filter(parameter == vars)
-        if (grepl("Congruency" ,vars)){
-          par = "Congruency"
-          # Write values
-          Full_Model_Info$mean[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$mean
-          Full_Model_Info$lower95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$lower95
-          Full_Model_Info$upper95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$upper95
-        } 
-        if (grepl("Block" ,vars)){
-          if (eff == "LW"){
-            par = "Listwide" 
-          } else {
-            par = "Itemspecific"
-          }
-          
-          # Write values
-          Full_Model_Info$mean[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$mean
-          Full_Model_Info$lower95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$lower95
-          Full_Model_Info$upper95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$upper95
-        } 
-        if (grepl("Control" ,vars)) {
-          if (eff == "LW"){
-            par = "LW_Block" 
-          } else {
-            par = "IS_Block"
-          }
-          
-          # Write values
-          Full_Model_Info$mean[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$mean
-          Full_Model_Info$lower95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$lower95
-          Full_Model_Info$upper95[Full_Model_Info$Item_type == itm & Full_Model_Info$Model == md & Full_Model_Info$Effect == eff & Full_Model_Info$Group == group_in & Full_Model_Info$Parameter == par] <- row_var$upper95
-        }
-        if (grepl("CI" ,vars) | grepl("CC" ,vars) ){
-          var_n <- substr(vars, start = 1, stop = 2)
-          temp <- tibble(Model = md,
-                         Item_type = itm,
-                         Effect = eff,
-                         Group = group_in,
-                         Parameter = var_n,
-                         BF = NA,
-                         mean = row_var$mean,
-                         lower95 = row_var$lower95,
-                         upper95 = row_var$upper95)
-          Full_Model_Info <- bind_rows(Full_Model_Info, temp)
-          
-        }
-        if (grepl("Inc_diff" ,vars) | grepl("Con_diff" ,vars) ){
-          var_n <- substr(vars, start = 1, stop = 3)
-          temp <- tibble(Model = md,
-                         Item_type = itm,
-                         Effect = eff,
-                         Group = group_in,
-                         Parameter = var_n,
-                         BF = NA,
-                         mean = row_var$mean,
-                         lower95 = row_var$lower95,
-                         upper95 = row_var$upper95)
-          Full_Model_Info <- bind_rows(Full_Model_Info, temp)
-        }
-        
-      }
-    }
-  }
+      Full_Model_Info$estimate <- eff_post$estimate
+      Full_Model_Info$lower.HPD <- eff_post$lower.HPD
+      Full_Model_Info$upper.HPD <- eff_post$upper.HPD
 }
 FM_old <- Full_Model_Info %>%
   mutate(mean = round(mean,1),
