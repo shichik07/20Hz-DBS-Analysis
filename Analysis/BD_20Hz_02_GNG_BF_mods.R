@@ -13,6 +13,7 @@ library(hypr)
 library(rstan)# package to generate contrasts
 library(StanHeaders)
 library(rstudioapi)
+library(readr)
 
 # Set a seed for sake of reproducibility
 set.seed(32936)
@@ -50,74 +51,39 @@ RT_data <- GoNoGo %>%
          RT > 0.2,
          GoNoGo == "NoGo - Go" | GoNoGo == "Go") %>%
   mutate(RT_ms = RT*1000) %>%
-  droplevels() # drop Stop trials
-  
+  droplevels() %>%# drop Stop trials
+  mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
+         SOFF = ifelse(Stim_verb == "OFF", 1, 0),
+         Go_diff =ifelse(GoNoGo == "NoGo - Go", 0.5, -0.5))
+
 
 # Define formulas so we can loop through them
-GNG_formulas <- c(
-  formula((S130Hz_Go + SOFF_Go + S20Hz_Go)/3 ~ (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3), # main effect Go effects
-  formula((S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (S130Hz_NoGo_Go + S130Hz_Go)/2), # Overall effect LFS vs HFS
-  formula((S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (SOFF_NoGo_Go + SOFF_Go)/2), # Overall effect LFS vs OFF
-  formula((S20Hz_NoGo_Go - S20Hz_Go) ~ (S130Hz_NoGo_Go - S130Hz_Go)), # Difference Go effects LFS vs HFS
-  formula((S20Hz_NoGo_Go - S20Hz_Go) ~ (SOFF_NoGo_Go - SOFF_Go)) # Difference Go effects LFS vs OFF
+GNG_formulas <- list(
+  bf(RT_ms ~ 1 + Go_diff + S130Hz + SOFF + S130Hz * Go_diff + (1 | Part_nr)), # no interaction 20Hz vs OFF
+  bf(RT_ms ~ 1 + Go_diff + S130Hz + SOFF + SOFF * Go_diff + (1 | Part_nr)) # no interaction 20Hz vs 130Hz
 )
 
-GoNoGo_Contrast_RT <- hypr(
-  Go_NoGo_Go = (S130Hz_Go + SOFF_Go + S20Hz_Go)/3 ~ (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3,
-  Stim_20v130 = (S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (S130Hz_NoGo_Go + S130Hz_Go)/2,
-  Stim_20vOFF = (S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (SOFF_NoGo_Go + SOFF_Go)/2,
-  GoDiff_20v130 = (S20Hz_NoGo_Go - S20Hz_Go) ~ (S130Hz_NoGo_Go - S130Hz_Go),
-  GoDiff_20vOFF = (S20Hz_NoGo_Go - S20Hz_Go) ~ (SOFF_NoGo_Go - SOFF_Go),
-  levels = c("S130Hz_NoGo_Go", "S130Hz_Go", "SOFF_Go", 
-             "SOFF_NoGo_Go", "S20Hz_NoGo_Go", "S20Hz_Go")
-)
 
-# contrast names separately
-GNG_contrast_names <- c(
-  "Go_NoGo_Go",
-  "Stim_20v130",
-  "Stim_20vOFF",
-  "GoDiff_20v130",
-  "GoDiff_20vOFF"
-)
 
-# GNG levels
-GNG_levels <- c("S130Hz_NoGo_Go", "S130Hz_Go", "SOFF_Go", 
-                "SOFF_NoGo_Go", "S20Hz_NoGo_Go", "S20Hz_Go")
+# models we assess
+GNG_mods <- c("GNG_min_GoDiff_20vOFF",
+             "GNG_min_GoDiff_20v130")
 
-GNG_mods <- c("GNG_min_Go_NoGo_Go", 
-             "GNG_min_Stim_20v130",
-             "GNG_min_Stim_20vOFF",
-             "GNG_min_GoDiff_20v130",
-             "GNG_min_GoDiff_20vOFF")
 
-# First let us get the model contrasts
-for(mods in 1:length(GNG_mods)){
-  # first create the contrast matrix
-  temp_mat <- hypr(GNG_formulas[-mods],
-                   levels = GNG_levels)
-  # next add the appropriate variable names
-  names(temp_mat) <- GNG_contrast_names[-mods]
-  
-  # Lastly rename the contrast matrix
-  assign(GNG_mods[mods], temp_mat)
-}
 
 # Same priors as for the model before
 prior_weakly_informed<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
   prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGo_NoGo_Go), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20vOFF),
+  prior(normal(0,  0.3), class = b, coef = Go_diff), 
+  prior(normal(0,  0.3), class = b, coef = Go_diff:SOFF),
+  prior(normal(0,  0.3), class = b, coef = Go_diff:S130Hz),
+  prior(normal(0,  0.3), class = b, coef = S130Hz),
+  prior(normal(0,  0.3), class = b, coef = SOFF),
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
-# brmsformula object RT analysis
-m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
 
 # okay create a function to pass model parameter
 pass_brms = function(save_name, prior, data, model) {
@@ -138,14 +104,12 @@ pass_brms = function(save_name, prior, data, model) {
 
 ##### now let us loop though our models and save the results 
 for(mods in 1:length(GNG_mods)){
-  # first assign appropriate contrasts to our dataset 
-  contrasts(RT_data$Contrast_F) <- contr.hypothesis(eval(parse(text = GNG_mods[mods])))
   # define prior
-  Prior_weakly <- prior_weakly_informed[-(mods+3),]
+  Prior_weakly <- prior_weakly_informed[-(mods+4),]
   # get save name for variable
   save_name <- paste("GNG_RT_", GNG_mods[mods], ".rda", sep = "")
   # fit the model
-  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data, model = m1_GoNoGo_shift)
+  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data, model = GNG_formulas[mods])
 } 
 
 #### Now Lets do the same for the accuracy data
