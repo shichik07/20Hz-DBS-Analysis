@@ -50,8 +50,14 @@ RT_data <- GoNoGo %>%
   filter(Correct_Response == 1,
          RT < 3,
          RT > 0.2,
-        GoNoGo == "NoGo - Go" | GoNoGo == "Go") %>%
-  mutate(RT_ms = RT*1000)
+         GoNoGo == "NoGo - Go" | GoNoGo == "Go") %>%
+  mutate(RT_ms = RT*1000) %>%
+  droplevels() %>%# drop Stop trials
+  
+  mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
+         SOFF = ifelse(Stim_verb == "OFF", 1, 0),
+         Go_diff =ifelse(GoNoGo == "NoGo - Go", 0.5, -0.5))
+
 
 RT_data2 <- GoNoGo %>%
   filter(Correct_Response == 1,
@@ -64,60 +70,21 @@ data_excluded <- 1-nrow(RT_data)/nrow(RT_data2)
 # if we can observe more slowing on NoGo - Go trials in the 20Hz condition, relatively
 # to the Go condition in the 20Hz condition, than the 130Hz and Off condition
 
-GoNoGo_Contrast_RT <- hypr(
-  Go_NoGo_Go = (S130Hz_Go + SOFF_Go + S20Hz_Go)/3 ~ (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3,
-  Stim_20v130 = (S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (S130Hz_NoGo_Go + S130Hz_Go)/2,
-  Stim_20vOFF = (S20Hz_NoGo_Go + S20Hz_Go)/2 ~ (SOFF_NoGo_Go + SOFF_Go)/2,
-  GoDiff_20v130 = (S20Hz_NoGo_Go - S20Hz_Go) ~ (S130Hz_NoGo_Go - S130Hz_Go),
-  GoDiff_20vOFF = (S20Hz_NoGo_Go - S20Hz_Go) ~ (SOFF_NoGo_Go - SOFF_Go),
-  #levels = c("S130Hz_NoGo_Go", "S130Hz_Go", "SOFF_Go", 
-            # "SOFF_NoGo_Go", "S20Hz_NoGo_Go", "S20Hz_Go")
-  levels = c("S130Hz_NoGo_Stop", "S130Hz_NoGo_Go", "S130Hz_Go",
-             "SOFF_Go", "SOFF_NoGo_Stop", "SOFF_NoGo_Go", 
-             "S20Hz_NoGo_Stop", "S20Hz_NoGo_Go", "S20Hz_Go")
-)
-
-GoNoGo_Contrast_RT
-
-# assign the generated contrast matrix to the List Wide Factor
-contrasts(RT_data$Contrast_F) <- contr.hypothesis(GoNoGo_Contrast_RT)
-contrasts(RT_data$Contrast_F)   
-
-
-# Prior informed weakly Item Specific. 
-# Note to self for the ndt prior: If I do not model an effect on the ndt parameter it is
-# specified in milliseconds (so Y_min). However, once I decide to put in a group 
-# intercept for example, it will be modeled using a log link function. Thus,
-# for the prior specification. Specify the prior on the actual scale if you
-# are not interested in any group effects on this parameter, but specify it on the
-# log scale if you want to parametrize ndt further.
 prior_weakly_informed<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
   prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGo_NoGo_Go), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20vOFF),
-  prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
-)
-
-prior_weakly_informed<- c(
-  prior(normal(6.5, 0.5), class = Intercept, lb = 0),
-  prior(normal(0 ,0.5), class = sigma, lb = 0),
-  prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGo_NoGo_Go), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF), 
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FGoDiff_20vOFF),
+  prior(normal(0,  0.3), class = b, coef = Go_diff), 
+  prior(normal(0,  0.3), class = b, coef = Go_diff:S130Hz),
+  prior(normal(0,  0.3), class = b, coef = Go_diff:SOFF), 
+  prior(normal(0,  0.3), class = b, coef = S130Hz),
+  prior(normal(0,  0.3), class = b, coef = SOFF),
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
 
 # brmsformula object RT analysis
-m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
+m1_GoNoGo_shift <- bf(RT_ms ~ 1  + Go_diff + S130Hz + SOFF + S130Hz*Go_diff + SOFF*Go_diff + (1 + Go_diff + S130Hz + SOFF |Part_nr))
 
 #get_prior(formula =  m1_GoNoGo_shift, data = RT_data, family = shifted_lognormal())
 
@@ -137,47 +104,36 @@ fit_shifted_log_GNG <- brm(formula = m1_GoNoGo_shift,
 save(fit_shifted_log_GNG, file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
 load(file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
 
-# posteriro predictive checks
-pp_check(fit_shifted_log_GNG, ndraws = 11, type = "hist")
-# Looks good for this model
-pp_check(fit_shifted_log_GNG, ndraws = 100, type = "dens_overlay")
-# Looks good for this model
-pp_check(fit_shifted_log_GNG, type = "boxplot", ndraws = 10)
-# A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat", stat = "mean")
-# looks really good
-pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
-# somewhat resonable
-pp_check(fit_shifted_log_GNG, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
+# Perform posterior predictive checks 
 
-# Great, the model looks good. Lets see the effect sizes, 
+# first calculate the posterior predictions
+a <- brms::posterior_epred(fit_shifted_log_GNG2)
 
-# first get variable names
-get_variables(fit_shifted_log_GNG)
+# summarize over conditions
+png(file="C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Figures/Posterior_Checks/RT_GNG_posterior_pred.png",
+    width=18, height=12, units="cm",res = 400)
+par(mfrow = c( 1, 3))
 
-post_eff <- fit_shifted_log_GNG %>%
-  spread_draws(b_Intercept, b_Contrast_FGo_NoGo_Go, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
-               b_Contrast_FGoDiff_20v130, b_Contrast_FGoDiff_20vOFF, sigma, ndt) %>%
-  mutate(Est_S130_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (-(1/3))*b_Contrast_FGoDiff_20v130 + (1/6)*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
-         Est_S130_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (1/3)*b_Contrast_FGoDiff_20v130 + (-(1/6))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
-         Est_S20_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (1/6)*b_Contrast_FGoDiff_20v130 + (1/6)*b_Contrast_FGoDiff_20vOFF)+ sigma/2 + ndt,
-         Est_S20_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (-(1/6))*b_Contrast_FGoDiff_20v130 + (-(1/6))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
-         Est_SOFF_NoGo = exp(b_Intercept + (-0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (1/6)*b_Contrast_FGoDiff_20v130 + (-(1/3))*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
-         Est_SOFF_Go = exp(b_Intercept + (0.5)*b_Contrast_FGo_NoGo_Go + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (-(1/6))*b_Contrast_FGoDiff_20v130 + (1/3)*b_Contrast_FGoDiff_20vOFF) + sigma/2 + ndt,
-         Go_NoGo_Go = (Est_S20_NoGo + Est_S130_NoGo + Est_SOFF_NoGo)/3 - (Est_S20_Go + Est_S130_Go + Est_SOFF_Go)/3,
-         S20_vs_S130 = (Est_S20_NoGo + Est_S20_Go)/2 - (Est_S130_NoGo + Est_S130_Go)/2,
-         S20_vs_SOFF = (Est_S20_NoGo + Est_SOFF_Go)/2 - (Est_SOFF_NoGo + Est_SOFF_Go)/2,
-         GoDiff_S20_vs_S130 = (Est_S20_NoGo - Est_S20_Go) - (Est_S130_NoGo - Est_S130_Go),
-         GoDiff_S20_vs_SOFF =(Est_S20_NoGo - Est_S20_Go) - (Est_SOFF_NoGo - Est_SOFF_Go)) %>%
-  #select(Go_NoGo_Go, S20_vs_S130, S20_vs_SOFF, GoDiff_S20_vs_S130, GoDiff_S20_vs_SOFF) %>%
-  summarise_draws(mean, median, sd, ~quantile(.x, probs = c(0.025, 0.975)))
+S130Hz_NoGo_Go <- rowMeans(a[,RT_data$Contrast_F == "S130Hz_NoGo_Go"])
+S130Hz_Go <- rowMeans(a[,RT_data$Contrast_F == "S130Hz_Go"])
+pred_130 <- S130Hz_NoGo_Go - S130Hz_Go
+mean_130 <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_NoGo_Go"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_Go"])
+hist(pred_130, main = "Go(NoGo) - Go:  130Hz Stimulation", xlab = c("difference in ms"))
+abline(v = mean_130, col = "red", lwd = 3)
 
+SOFF_NoGo_Go <- rowMeans(a[,RT_data$Contrast_F == "SOFF_NoGo_Go"])
+SOFF_Go <- rowMeans(a[,RT_data$Contrast_F == "SOFF_Go"])
+pred_OFF <- SOFF_NoGo_Go - SOFF_Go
+mean_OFF <-  mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_NoGo_Go"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_Go"])
+hist(pred_OFF, main = "Go(NoGo) - Go:  OFF Stimulation", xlab = c("difference in ms"))
+abline(v = mean_OFF, col = "red", lwd = 3)
+
+S20Hz_NoGo_Go <- rowMeans(a[,RT_data$Contrast_F == "S20Hz_NoGo_Go"])
+S20Hz_Go <- rowMeans(a[,RT_data$Contrast_F == "S20Hz_Go"])
+pred_20 <- S20Hz_NoGo_Go - S20Hz_Go
+mean_20 <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_NoGo_Go"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_Go"])
+hist(pred_20, main = "Go(NoGo) - Go:  20Hz Stimulation", xlab = c("difference in ms"))
+abline(v = mean_20, col = "red", lwd = 3)
 
 # first calculate the estimated marginal means
 emm_GNG_RT <- emmeans(fit_shifted_log_GNG, specs = ~ Contrast_F, epred = TRUE)
@@ -191,6 +147,7 @@ S20Hz_NoGo_Go <- c(0, 0, 0, 0, 1, 0)
 S20Hz_Go <- c(0, 0, 0, 0, 0, 1)
 
 # and contrasts for the differences in Go effects
+
 GoDiff_S20_vs_S130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
 GoDiff_S20_vs_SOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
 
