@@ -21,27 +21,6 @@ library(stringr)
 # Set a seed for sake of reproducibility
 set.seed(32936)
 
-Bayes_factor_calc <- function(Likelihoods, param, ana){
-  # function to calculate Bayes factor
-  #
-  # Args:
-  #   ana: string for the task we are interested in, can take on the values "GNG", "SRT", "SST", "FLT"
-  #   Likelihoods: tibble containing likelihoods for all models
-  #   param: parameter we want to calculate BF for
-  # Returns:
-  #   Bayes Factor (numeric) for the specified parameter
-  sub_param <- paste(ana, "min", param, sep = "_")
-    mod_with <- Likelihoods %>%
-      filter(Model == "full") %>%
-      pull(Log_lik)
-    mod_without <-  Likelihoods %>%
-      filter(Model == sub_param) %>%
-      pull(Log_lik) 
-  
-    BF <- exp(mod_with - mod_without) # we have to log transform again for division
-    return(BF)
-}
-
 load_part_mod <- function(loc, ana, model_t, param){
   # loads the partial model
   #
@@ -57,8 +36,6 @@ load_part_mod <- function(loc, ana, model_t, param){
   fit_model <- eval(parse(text = fit)) # rename the model
   return(fit_model)
 }
-
-
 
 load_full_mod <- function(loc, ana, model_t){
   # loads the partial model
@@ -106,8 +83,6 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
     Log_lik = numeric()
   )
   
-
-  
   # partial models that we are going to load
   submodel <- paste(ana, "min", parameter, sep = "_")
   
@@ -139,15 +114,6 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   }
   return(Model_BF)
 }
-
-fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
-parameter <- c("GoDiff_20v130",
-               "GoDiff_20vOFF")
-
-model<- load_full_mod(fullmod_loc, ana, model_t)
-
-summary_table <- conditional_effect_calc_shift(model)
-
 
 conditional_effect_calc_shift <- function(model){
   # calculate effect estimates in ms or percent
