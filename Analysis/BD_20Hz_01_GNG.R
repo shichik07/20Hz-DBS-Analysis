@@ -107,7 +107,7 @@ load(file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
 # Perform posterior predictive checks 
 
 # first calculate the posterior predictions
-a <- brms::posterior_epred(fit_shifted_log_GNG2)
+a <- brms::posterior_epred(fit_shifted_log_GNG)
 
 # summarize over conditions
 png(file="C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Figures/Posterior_Checks/RT_GNG_posterior_pred.png",
@@ -135,28 +135,24 @@ mean_20 <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_NoGo_Go"]) - mean(RT_
 hist(pred_20, main = "Go(NoGo) - Go:  20Hz Stimulation", xlab = c("difference in ms"))
 abline(v = mean_20, col = "red", lwd = 3)
 
-# first calculate the estimated marginal means
-emm_GNG_RT <- emmeans(fit_shifted_log_GNG, specs = ~ Contrast_F, epred = TRUE)
-
-# define new contrasts for emmeans - there should be an easier way to this
-S130Hz_NoGo_Go <- c(1, 0, 0, 0, 0, 0)
-S130Hz_Go <- c(0, 1, 0, 0, 0, 0)
-SOFF_Go <- c(0, 0, 1, 0, 0, 0)
-SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0)
-S20Hz_NoGo_Go <- c(0, 0, 0, 0, 1, 0)
-S20Hz_Go <- c(0, 0, 0, 0, 0, 1)
-
-# and contrasts for the differences in Go effects
+# calculate marginal means
+emm_GNG_RT <- emmeans(fit_shifted_log_GNG, specs = ~ SOFF*Go_diff +  S130Hz*Go_diff, epred = TRUE)
+S130Hz_NoGo_Go <- c(0, 0, 0, 0, 0, 0, 1, 0)
+S130Hz_Go <- c(0, 0, 0, 0, 1, 0, 0, 0)
+SOFF_Go <- c(0, 1, 0, 0, 0, 0, 0, 0)
+SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0, 0, 0)
+S20Hz_NoGo_Go <- c(0, 0, 1, 0, 0, 0, 0, 0)
+S20Hz_Go <- c(1, 0, 0, 0, 0, 0, 0, 0)
 
 GoDiff_S20_vs_S130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
 GoDiff_S20_vs_SOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
 
 # Next we calculate the contrasts of interest from these marginal means
-contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz_NoGo_Go - S130Hz_Go,
-                                   "S20Hz_NoGo_Go - S20Hz_Go" = S20Hz_NoGo_Go - S20Hz_Go,
-                                   "SOFFHz_NoGo_Go - SOFFHz_Go" = SOFF_NoGo_Go - SOFF_Go,
-                                   "GoDiff_S20_vs_S130" = GoDiff_S20_vs_S130,
-                                   "GoDiff_S20_vs_SOFF" = GoDiff_S20_vs_SOFF)) 
+test <- contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz_NoGo_Go - S130Hz_Go,
+                                            "S20Hz_NoGo_Go - S20Hz_Go" = S20Hz_NoGo_Go - S20Hz_Go,
+                                            "SOFFHz_NoGo_Go - SOFFHz_Go" = SOFF_NoGo_Go - SOFF_Go,
+                                            "GoDiff_S20_vs_S130" = GoDiff_S20_vs_S130,
+                                            "GoDiff_S20_vs_SOFF" = GoDiff_S20_vs_SOFF)) 
 
 
 # alright, we see participants definitely slowed more in the 20Hz condition compared to the OFF state, there is
@@ -165,93 +161,6 @@ contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz_NoGo_Go
 # Maybe try the median? Regardless a BF should provide better interpretability. Note: I understand
 ## Next, let us look at the accuracy data
 
-#### Analysis of the accuracy data
-# Things are a little trickier here. Now in addition we are interested in the error rates on stop trials.
-# GoNoGo_Contrast_Acc <- hypr(
-#   Go_NoGo_Go = (S130Hz_Go + SOFF_Go + S20Hz_Go)/3 ~ (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3,
-#   NoGo_Stop_NoGo_Go = (S130Hz_NoGo_Stop + SOFF_NoGo_Stop + S20Hz_NoGo_Stop)/3 ~ 
-#     (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3,
-#   Stim_20v130 = (S20Hz_NoGo_Go + S20Hz_Go +  S20Hz_NoGo_Stop)/3 ~ 
-#     (S130Hz_NoGo_Go + S130Hz_Go + S130Hz_NoGo_Stop)/3,
-#   Stim_20vOFF = (S20Hz_NoGo_Go + S20Hz_Go +  S20Hz_NoGo_Stop)/3 ~ 
-#     (SOFF_NoGo_Go + SOFF_Go +  SOFF_NoGo_Stop)/3,
-#   NoGo_Go_Diff_20v130 = S20Hz_NoGo_Go ~ S130Hz_NoGo_Go,
-#   NoGo_Stopp_Diff_20v130 = S20Hz_NoGo_Stop ~ S130Hz_NoGo_Stop,
-#   NoGo_Go_Diff_20vOFF = S20Hz_NoGo_Go ~ SOFF_NoGo_Go,
-#   NoGo_Stopp_Diff_20vOFF = S20Hz_NoGo_Stop ~ SOFF_NoGo_Stop,
-#   levels = c("S130Hz_NoGo_Go", "S130Hz_Go", "SOFF_Go", 
-#              "SOFF_NoGo_Go", "S20Hz_NoGo_Go", "S20Hz_Go",
-#              "S130Hz_NoGo_Stop", "S20Hz_NoGo_Stop", "SOFF_NoGo_Stop")
-# )
-# 
-# GoNoGo_Contrast_Acc
-# 
-# 
-# # assign the generated contrast matrix to the List Wide Factor
-# contrasts(GoNoGo$Contrast_F) <- contr.hypothesis(GoNoGo_Contrast_Acc)
-# contrasts(GoNoGo$Contrast_F)   
-# 
-# 
-# prior_weakly_informed_logreg<- c(
-#   prior(normal(-0.6, 0.6), class = Intercept),
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FGo_NoGo_Go), 
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Go_Diff_20v130),
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Go_Diff_20vOFF), 
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Stop_NoGo_Go),
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Stopp_Diff_20v130),
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FNoGo_Stopp_Diff_20vOFF), 
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20v130),
-#   prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20vOFF),
-#   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
-# )
-# 
-# 
-# #get_prior(formula = m1_GoNoGo_log, data = GoNoGo, family = bernoulli(link = logit))
-# 
-# # brmsformula object Item Specific
-# m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
-# 
-# #### Fit Inducer Models ####
-# 
-# 
-# # we should consider varying non-decision times between the groups
-# fit_log_flanker <- brm(formula = m1_GoNoGo_log,
-#                        family = bernoulli(link = logit),
-#                        data = GoNoGo,
-#                        prior = prior_weakly_informed_logreg,
-#                        warmup = 2000,
-#                        iter = 12000,# 20000 is the limit necessary for bridge sampling
-#                        cores = 4, seed = 423,
-#                        save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
-#                        chains =4)
-# 
-# save(fit_log_flanker, file = "E:/20Hz/Data/Modelle/log_reg_GoNoGo.rda")
-# load(file = "E:/20Hz/Data/Modelle/log_reg_GoNoGo.rda")
-# 
-# warp_em <- emmeans(fit_log_flanker, ~ Contrast_F, type = "response")
-# cont <- contrast(warp_em, type = "response")
-# #get the posterior draws from the contrasts 
-# cont_posterior <- gather_emmeans_draws(cont)
-# 
-# # posteriro predictive checks
-# pp_check(fit_log_flanker, ndraws = 11, type = "hist")
-# # Looks good for this model
-# pp_check(fit_log_flanker, ndraws = 100, type = "dens_overlay")
-# # Looks good for this model
-# pp_check(fit_log_flanker, type = "boxplot", ndraws = 10)
-# # A few observation outside, but our particpants had a deadline - cannot be modelled
-# pp_check(fit_log_flanker, ndraws = 1000, type = "stat", stat = "mean")
-# # looks good
-# pp_check(fit_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
-# # looks good
-# pp_check(fit_log_flanker, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
-
-#NOTE: The parametrization that I chose worked terribly. For the final model
-# I will use the generic parametrization and use the emmeans for the predicted contrasts of interest.
-
-## Second Analysis with the default parametrization
-
-#get_prior(formula = m1_GoNoGo_log2, data = GoNoGo, family = bernoulli(link = logit))
 
 prior_weakly_informed_logreg2<- c(
   prior(normal(-2, 1), class = Intercept),
