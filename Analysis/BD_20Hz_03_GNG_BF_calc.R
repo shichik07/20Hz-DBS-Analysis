@@ -20,19 +20,6 @@ library(xtable)
 # Set a seed for sake of reproducibility
 set.seed(32936)
 
-logsum <- function(l1, l2){
-  # because we need to add very small probabilities (exponentiate the log),
-  # this is possible with this function. Source:
-  # https://stats.stackexchange.com/questions/379335/adding-very-small-probabilities-how-to-compute
-  # Args:
-  #   l1: log of likelihood 1 (numeric)
-  #   l2: log of likelihood 2 (numeric)
-  # Returns:
-  #   the sum of the two likelihoods (numeric)
-  
-  max(l1,l2) + log1p(exp(-abs(l1-l2)))
-}
-
 Bayes_factor_calc <- function(Likelihoods, param, ana){
   # function to calculate Bayes factor
   #
@@ -92,17 +79,6 @@ load_full_mod <- function(loc, ana, model_t){
   return(fit_model)
 }
 
-
-fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
-parameter <- c("Go_NoGo_Go", 
-              "Stim_20v130",
-              "Stim_20vOFF",
-              "GoDiff_20v130",
-              "GoDiff_20vOFF")
-
-ana <- "GNG"
-model_t <- "RT"
-
 BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   # calculates the Bayes for all models
   #
@@ -128,6 +104,8 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
     Model = character(),
     Log_lik = numeric()
   )
+  
+
   
   # partial models that we are going to load
   submodel <- paste(ana, "min", parameter, sep = "_")
@@ -164,7 +142,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
     #save results as a tibble
     temp <- tibble(
       Model = ana,
-      Parameter = substr(params, start = 4, stop = nchar(params)),
+      Parameter = params,
       BF = BF,
     )
     # join tibble as row
@@ -174,140 +152,108 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   return(Model_BF)
 }
 
+fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
+parameter <- c("Go_NoGo_Go", 
+               "Stim_20v130",
+               "Stim_20vOFF",
+               "GoDiff_20v130",
+               "GoDiff_20vOFF")
+
+model<- load_full_mod(fullmod_loc, ana, model_t)
+
+summary_table <- conditional_effect_calc_shift(model)
 
 
-
-# calculate effect estimates in ms
-conditional_effect_calc_shift <- function(effect, model){
+conditional_effect_calc_shift <- function(model){
+  # calculate effect estimates in ms or percent
+  # Args:
+  #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: string indicating which parameter the model should be lacking and depends on ana
+  # Returns:
+  #   summary(model_effects): Table with summarizing the posterior distribution of effect estimates, median, upper and lower 95% hpd interval boundaries
+  
+  
   # get posterior samples to calculate conditional effects
-  m_post <- posterior_samples(model)
-  # calculate conditional effects depending on model
-  if (effect == "LW"){
-    MC_C_PD <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_LWPD_Congruency + 0.5 * m_post$b_Contrast_LWPD_Listwide  + 0.5*m_post$b_Contrast_LWPD_LW_Block) + m_post$sigma/2)
-    MC_I_PD <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_LWPD_Congruency + 0.5 * m_post$b_Contrast_LWPD_Listwide  - 0.5*m_post$b_Contrast_LWPD_LW_Block) + m_post$sigma/2)
-    MI_C_PD <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_LWPD_Congruency - 0.5 * m_post$b_Contrast_LWPD_Listwide  - 0.5*m_post$b_Contrast_LWPD_LW_Block) + m_post$sigma/2)
-    MI_I_PD <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_LWPD_Congruency - 0.5 * m_post$b_Contrast_LWPD_Listwide  + 0.5*m_post$b_Contrast_LWPD_LW_Block) + m_post$sigma/2)
-    MC_C_CO <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_LWCO_Congruency + 0.5 * m_post$b_Contrast_LWCO_Listwide  + 0.5*m_post$b_Contrast_LWCO_LW_Block) + m_post$sigma/2)
-    MC_I_CO <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_LWCO_Congruency + 0.5 * m_post$b_Contrast_LWCO_Listwide  - 0.5*m_post$b_Contrast_LWCO_LW_Block) + m_post$sigma/2)
-    MI_C_CO <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_LWCO_Congruency - 0.5 * m_post$b_Contrast_LWCO_Listwide  - 0.5*m_post$b_Contrast_LWCO_LW_Block) + m_post$sigma/2)
-    MI_I_CO <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_LWCO_Congruency - 0.5 * m_post$b_Contrast_LWCO_Listwide  + 0.5*m_post$b_Contrast_LWCO_LW_Block) + m_post$sigma/2)
-    model_effects <- tibble(
-      Congruency_PD = (MC_I_PD + MI_I_PD)/2 - (MC_C_PD + MI_C_PD)/2,
-      Congruency_CO = (MC_I_CO + MI_I_CO)/2 - (MC_C_CO + MI_C_CO)/2,
-      Block_CO = (MC_I_CO + MC_C_CO)/2 - (MI_I_CO + MI_C_CO)/2,
-      Block_PD = (MC_I_PD + MC_C_PD)/2 - (MI_I_PD + MI_C_PD)/2,
-      Stroop_MC_PD = MC_I_PD - MC_C_PD,
-      Stroop_MI_PD = MI_I_PD - MI_C_PD,
-      Stroop_MC_CO = MC_I_CO - MC_C_CO,
-      Stroop_MI_CO = MI_I_CO - MI_C_CO,
-      Control_PD = Stroop_MC_PD - Stroop_MI_PD,
-      Control_CO = Stroop_MC_CO - Stroop_MI_CO,
-      CC_CO = MC_C_CO - MI_C_CO,
-      CC_PD = MC_C_PD - MI_C_PD,
-      CI_CO = MI_I_CO - MC_I_CO,
-      CI_PD = MI_I_PD - MC_I_PD,
-      Inc_diff_CO_PD = CI_CO - CI_PD,
-      Con_diff_CO_PD = CC_CO - CC_PD)
-  } else if (effect == "IS"){
-    MC_C_PD <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_ISPD_Congruency + 0.5 * m_post$b_Contrast_ISPD_Itemspecific  + 0.5*m_post$b_Contrast_ISPD_IS_Block) + m_post$sigma/2)
-    MC_I_PD <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_ISPD_Congruency + 0.5 * m_post$b_Contrast_ISPD_Itemspecific  - 0.5*m_post$b_Contrast_ISPD_IS_Block) + m_post$sigma/2)
-    MI_C_PD <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_ISPD_Congruency - 0.5 * m_post$b_Contrast_ISPD_Itemspecific  - 0.5*m_post$b_Contrast_ISPD_IS_Block) + m_post$sigma/2)
-    MI_I_PD <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_ISPD_Congruency - 0.5 * m_post$b_Contrast_ISPD_Itemspecific  + 0.5*m_post$b_Contrast_ISPD_IS_Block) + m_post$sigma/2)
-    MC_C_CO <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_ISCO_Congruency + 0.5 * m_post$b_Contrast_ISCO_Itemspecific  + 0.5*m_post$b_Contrast_ISCO_IS_Block) + m_post$sigma/2)
-    MC_I_CO <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_ISCO_Congruency + 0.5 * m_post$b_Contrast_ISCO_Itemspecific  - 0.5*m_post$b_Contrast_ISCO_IS_Block) + m_post$sigma/2)
-    MI_C_CO <- exp((m_post$b_Intercept + 0.5* m_post$b_Contrast_ISCO_Congruency - 0.5 * m_post$b_Contrast_ISCO_Itemspecific  - 0.5*m_post$b_Contrast_ISCO_IS_Block) + m_post$sigma/2)
-    MI_I_CO <- exp((m_post$b_Intercept - 0.5* m_post$b_Contrast_ISCO_Congruency - 0.5 * m_post$b_Contrast_ISCO_Itemspecific  + 0.5*m_post$b_Contrast_ISCO_IS_Block) + m_post$sigma/2)
-    model_effects <- tibble(
-      Congruency_PD = (MC_I_PD + MI_I_PD)/2 - (MC_C_PD + MI_C_PD)/2,
-      Congruency_CO = (MC_I_CO + MI_I_CO)/2 - (MC_C_CO + MI_C_CO)/2,
-      Block_CO = (MC_I_CO + MC_C_CO)/2 - (MI_I_CO + MI_C_CO)/2,
-      Block_PD = (MC_I_PD + MC_C_PD)/2 - (MI_I_PD + MI_C_PD)/2,
-      Stroop_MC_PD = MC_I_PD - MC_C_PD,
-      Stroop_MI_PD = MI_I_PD - MI_C_PD,
-      Stroop_MC_CO = MC_I_CO - MC_C_CO,
-      Stroop_MI_CO = MI_I_CO - MI_C_CO,
-      Control_PD = Stroop_MC_PD - Stroop_MI_PD,
-      Control_CO = Stroop_MC_CO - Stroop_MI_CO,
-      CC_CO = MC_C_CO - MI_C_CO,
-      CC_PD = MC_C_PD - MI_C_PD,
-      CI_CO = MI_I_CO - MC_I_CO,
-      CI_PD = MI_I_PD - MC_I_PD,
-      Inc_diff_CO_PD = CI_CO - CI_PD,
-      Con_diff_CO_PD = CC_CO - CC_PD)
-  }
-  return(model_effects)
-}
-
-
-# function calculate summary statistics from posterior distributions
-post_sum_calc <- function(summary_table){
-  col_n <- colnames(summary_table)
-  model_summary <- tibble(
-    parameter = character(),
-    mean = numeric(),
-    lower95 = numeric(),
-    upper95 = numeric()
-  )
-  for (var_n in col_n){
-    var_t <- eval(parse(text = paste('summary_table$', var_n)))
-    temp <- tibble(
-      parameter = var_n,
-      mean = mean(var_t),
-      lower95 = quantile(var_t, probs = 0.025),
-      upper95 = quantile(var_t, probs = 0.975)
-    )
-    # join new row with summary table
-    model_summary <- bind_rows(model_summary, temp)
-  }
-  return(model_summary)
+  # first calculate the estimated marginal means
+  emm <- emmeans(model, specs = ~ Contrast_F, epred = TRUE)
+  
+  # define new contrasts for emmeans - there should be an easier way to this
+  S130Hz_NoGo_Go <- c(1, 0, 0, 0, 0, 0)
+  S130Hz_Go <- c(0, 1, 0, 0, 0, 0)
+  SOFF_Go <- c(0, 0, 1, 0, 0, 0)
+  SOFF_NoGo_Go <- c(0, 0, 0, 1, 0, 0)
+  S20Hz_NoGo_Go <- c(0, 0, 0, 0, 1, 0)
+  S20Hz_Go <- c(0, 0, 0, 0, 0, 1)
+  
+  # and contrasts for the differences in Go effects
+  Go_NoGo_Go <- (S130Hz_NoGo_Go + SOFF_NoGo_Go + S20Hz_NoGo_Go)/3 - (S130Hz_Go + SOFF_Go + S20Hz_Go)/3
+  Stim_20v130 <- (S20Hz_NoGo_Go + S20Hz_Go)/2 - (S130Hz_NoGo_Go + S130Hz_Go)/2
+  Stim_20vOFF <- (S20Hz_NoGo_Go + S20Hz_Go)/2 - (SOFF_NoGo_Go + SOFF_Go)/2
+  GoDiff_20v130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
+  GoDiff_20vOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
+  
+  # Next we calculate the contrasts of interest from these marginal means
+  model_effects <- contrast(emm, method = list("Go_NoGo_Go" = Go_NoGo_Go,
+                                     "Stim_20v130" = Stim_20v130,
+                                     "Stim_20vOFF" = Stim_20vOFF,
+                                     "GoDiff_20v130" = GoDiff_20v130,
+                                     "GoDiff_20vOFF" = GoDiff_20vOFF))
+  return(summary(model_effects))
 }
 
 ### First we get all the variables we need to call our readily calculated models
 
 # contrast names seperately
 
-Partial_models_saveloc <- "E:/AdaptiveControl/Data/BehaviorResults"
-#Full_models_saveloc <- "E:/AdaptiveControl/Data/BehaviorResults"
-Full_models_saveloc <- "C:/Users/doex9445/Dateien/Julius/AdaptiveControl/Data"
+fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
+part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
+parameter <- c("Go_NoGo_Go", 
+               "Stim_20v130",
+               "Stim_20vOFF",
+               "GoDiff_20v130",
+               "GoDiff_20vOFF")
+
+ana <- "GNG"
+model_t <- "RT"
+
+Partial_models_saveloc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
+Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
 
 # calculate BFs
-BF_Results <- BF_calc( 
-  fullmod_loc = Full_models_saveloc, 
-  part_mod_loc = Partial_models_saveloc)
-
+BF_Results <- BF_calc(fullmod_loc = Full_models_saveloc, 
+                      part_mod_loc = Partial_models_saveloc, 
+                      parameter = parameter, 
+                      ana = ana, 
+                      model_t = model_t)
 #save data
-write.table(BF_Results , file = "C:/Users/doex9445/Dateien/Julius/AdaptiveControl/Data/BF_Results.csv")
+write.table(BF_Results , file = "r{E:\20Hz\Data\Modelle\BF_Results.csv}")
 
 # load data again
-BF_Results <- read.csv(file = "C:/Users/doex9445/Dateien/Julius/AdaptiveControl/Data/BF_Results.csv", header = TRUE, sep = "")
+BF_Results <- read.csv(file = "r{E:\20Hz\Data\Modelle\BF_Results.csv}", header = TRUE, sep = "")
 #### Now that we have the table with our BFs, let us load the parameter estimates
 
 # New Tibble
 Full_Model_Info <- BF_Results %>%
-  mutate(mean = NA , lower95 = NA, upper95 = NA) 
+  mutate(estimate = NA , lower.HPD = NA, upper.HPD = NA) 
 
 # Load and save the data
 
-mods = c("RT")
-item_type = c("inducer","diagnostic")
-effect = c("LW", "IS")
+md = c("RT")
+ana <- "GNG"
+model_t <- "RT"
+
 
 for (md in mods) {
-  for (eff in effect){
-    for (itm in item_type){
       #load model
-      model <- load_full_mod(loc = Full_models_saveloc,
-                             model_t = md,
-                             item_type = itm,
-                             effect = eff)
+      full_model <- load_full_mod(loc = fullmod_loc, 
+                             ana = ana, 
+                             model_t = model_t)
       
       # calculate posterior conditional effect samples
       if (md == "RT"){
-        eff_post <- conditional_effect_calc_shift(effect = eff,
-                                                  model = model)
+        eff_post <- conditional_effect_calc_shift(model = full_model)
       } else if (md == "Acc"){
-        eff_post <- conditional_effect_calc_acc(effect = eff,
-                                                model = model)
+        eff_post <- conditional_effect_calc_acc(model = full_model)
       }
       #translate into summary stats
       sum_t <- post_sum_calc(eff_post)
