@@ -74,6 +74,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
     Model = character(),
     Parameter = character(),
     BF = numeric(),
+    Analysis = character()
   )
   
   #print(paste("Analyzing the", eff, "effect for the", itm, "items of the", model_type, "data"))
@@ -107,6 +108,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
       Model = ana,
       Parameter = str_sub(par, start =9),
       BF = temp_BF$bf,
+      Analysis = model_t
     )
     # join tibble as row
     Model_BF <- Model_BF %>%
@@ -134,12 +136,40 @@ conditional_effect_calc_shift <- function(model){
   S20Hz_NoGo_Go <- c(0, 0, 1, 0, 0, 0, 0, 0)
   S20Hz_Go <- c(1, 0, 0, 0, 0, 0, 0, 0)
   
-  GoDiff_S20_vs_S130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
-  GoDiff_S20_vs_SOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
+  GoDiff_20v130 <- (S20Hz_NoGo_Go - S20Hz_Go) - (S130Hz_NoGo_Go - S130Hz_Go)
+  GoDiff_20vOFF <- (S20Hz_NoGo_Go - S20Hz_Go) - (SOFF_NoGo_Go - SOFF_Go)
   
   # Next we calculate the contrasts of interest from these marginal means
-  model_effects <- contrast(emm_GNG_RT, method = list("GoDiff_S20_vs_S130" = GoDiff_S20_vs_S130,
-                                             "GoDiff_S20_vs_SOFF" = GoDiff_S20_vs_SOFF)) 
+  model_effects <- contrast(emm_GNG_RT, method = list("GoDiff_20v130" = GoDiff_20v130,
+                                             "GoDiff_20vOFF" = GoDiff_20vOFF)) 
+  return(summary(model_effects))
+}
+
+conditional_effect_calc_acc <- function(model){
+  # calculate effect estimates in ms or percent
+  # Args:
+  #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: string indicating which parameter the model should be lacking and depends on ana
+  # Returns:
+  #   summary(model_effects): Table with summarizing the posterior distribution of effect estimates, median, upper and lower 95% hpd interval boundaries
+  
+  
+  # get posterior samples to calculate conditional effects
+  # first calculate the estimated marginal means
+  emm_GNG_Acc <- emmeans(model, ~ Contrast_F, epred = TRUE)
+  S130Hz_NoGo_Go <- c(0, 1, 0, 0, 0, 0, 0, 0, 0)
+  S130Hz_NoGo <- c(1, 0, 0, 0, 0, 0, 0, 0, 0)
+  SOFF_NoGo <- c(0, 0, 0, 0, 1, 0, 0, 0, 0)
+  SOFF_NoGo_Go <- c(0, 0, 0, 0, 0, 1, 0, 0, 0)
+  S20Hz_NoGo_Go <- c(0, 0, 0, 0, 0, 0, 0, 1, 0)
+  S20Hz_NoGo <- c(0, 0, 0, 0, 0, 0, 1, 0, 0)
+ 
+  
+  # Next we calculate the contrasts of interest from these marginal means
+  model_effects <- contrast(emm_GNG_Acc , method = list("NoGo_Stop_20Hz_vs_130Hz" = S20Hz_NoGo - S130Hz_NoGo,
+                                                      "NoGo_Stop_20Hz_vs_OFF" = S20Hz_NoGo - SOFF_NoGo,
+                                                      "NoGo_Go_20Hz_vs_130Hz" = S20Hz_NoGo_Go - S130Hz_NoGo_Go,
+                                                      "NoGo_Go_20Hz_vs_OFF"= S20Hz_NoGo_Go - SOFF_NoGo_Go)) 
   return(summary(model_effects))
 }
 
@@ -149,11 +179,19 @@ conditional_effect_calc_shift <- function(model){
 
 fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
 part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
-parameter <- c("GoDiff_20v130",
+parameter_RT <- c("GoDiff_20v130",
                "GoDiff_20vOFF")
 
+parameter_Acc <- c(
+  "NoGo_Stop_20Hz_vs_130Hz",
+  "NoGo_Stop_20Hz_vs_OFF",
+  "NoGo_Go_20Hz_vs_130Hz",
+  "NoGo_Go_20Hz_vs_OFF"
+)
+
 ana <- "GNG"
-model_t <- "RT"
+model_RT <- "RT"
+model_Acc <- "Acc"
 
 Partial_models_saveloc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
 Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
@@ -161,72 +199,58 @@ Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
 # calculate BFs for the RT data
 BF_Results <- BF_calc(fullmod_loc = Full_models_saveloc, 
                       part_mod_loc = Partial_models_saveloc, 
-                      parameter = parameter, 
+                      parameter = parameter_RT, 
                       ana = ana, 
-                      model_t = model_t)
+                      model_t = model_RT)
+
 #save data
-write.table(BF_Results , file = "E:/20Hz/Data/Modelle/BF_Results_RT.csv")
+
+# Now the same for the Acc data 
+BF_Results <- BF_Results %>%
+  bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
+                      part_mod_loc = Partial_models_saveloc, 
+                      parameter = parameter_Acc, 
+                      ana = ana, 
+                      model_t = model_Acc))
+
+
+
+#save data
+write.table(BF_Results , file = "E:/20Hz/Data/Modelle/BF_Results_GNG.csv")
 
 # load data again
-BF_Results <- read.csv(file = "E:/20Hz/Data/Modelle/BF_Results_RT.csv", header = TRUE, sep = "")
+BF_Results <- read.csv(file = "E:/20Hz/Data/Modelle/BF_Results_GNG.csv", header = TRUE, sep = "")
 #### Now that we have the table with our BFs, let us load the parameter estimates
 
 # New Tibble
 Full_Model_Info <- BF_Results %>%
   mutate(estimate = NA , lower.HPD = NA, upper.HPD = NA) 
 
-# Load and save the data
-
-md = c("RT")
-ana <- "GNG"
-model_t <- "RT"
-
+# Loop through analysis and save effects
+mods = c("RT", "Acc")
 
 for (md in mods) {
-      #load model
-      full_model <- load_full_mod(loc = fullmod_loc, 
-                             ana = ana, 
-                             model_t = model_t)
-      
-      # calculate posterior conditional effect samples
-      if (md == "RT"){
-        eff_post <- conditional_effect_calc_shift(model = full_model)
-      } else if (md == "Acc"){
-        eff_post <- conditional_effect_calc_acc(model = full_model)
-      }
-      
-      #integrate summary stats into BF table
-      Full_Model_Info$estimate <- eff_post$estimate
-      Full_Model_Info$lower.HPD <- eff_post$lower.HPD
-      Full_Model_Info$upper.HPD <- eff_post$upper.HPD
+  #load model
+  full_model <- load_full_mod(loc = fullmod_loc, 
+                              ana = ana, 
+                              model_t = md)
+  
+  # calculate posterior conditional effect samples
+  if (md == "RT"){
+    eff_post <- conditional_effect_calc_shift(model = full_model)
+  } else if (md == "Acc"){
+    eff_post <- conditional_effect_calc_acc(model = full_model)
+  }
+  
+  #integrate summary stats into BF table
+  for (elem in eff_post$contrast){
+    # find correct row
+    idx <- Full_Model_Info$Analysis == md & Full_Model_Info$Parameter == elem
+    Full_Model_Info$estimate[idx] <- eff_post$estimate[eff_post$contrast == elem]
+    Full_Model_Info$lower.HPD[idx] <- eff_post$lower.HPD[eff_post$contrast == elem]
+    Full_Model_Info$upper.HPD[idx] <- eff_post$upper.HPD[eff_post$contrast == elem]
+  }
 }
-FM_old <- Full_Model_Info %>%
-  mutate(mean = round(mean,1),
-         lower95 = round(lower95,1),
-         upper95 = round(upper95,1)) %>%
-  filter(Effect == "IS")
-#NOTE: by accident when i created the models for the BF calculation, also the models
-#Note: When i created the models for the BF calculation, by accident, I named them the same 
-# for the item specific effect as the list wise effect. So the itemspecific model actually is named listwise (variable names are correct though)
-# same goes for the interaction. Thus in the above code only LW_Block and Listwise are used. Does not affect the results though.
-#For better readability I correct that below
-Full_Model_Info_fin <- Full_Model_Info #%>%
-#mutate(Parameter = case_when(
-#Effect == "IS" & Parameter == "Listwide" ~ "Itemspecific",
-#Effect == "IS" & Parameter == "LW_Block" ~ "IS_Block",
-#TRUE ~ Parameter))
 
-# Export as latex table
-print(xtable(Full_Model_Info_fin, type = "latex"), file = "C:/Users/doex9445/Dateien/Julius/AdaptiveControl/Data/Bheav_Summary.tex")
-
-# Filter only the RT Analysis Results
-
-Full_Model_Info_fin_Acc <- Full_Model_Info_fin %>%
-  filter(Model == "Acc") %>%
-  filter(Effect == "LW") %>%
-  mutate(mean = round(mean,1)) %>%
-  mutate(lower95 = round(lower95,1)) %>%
-  mutate(upper95 = round(upper95,1)) %>%
-  mutate(BF = BF)
-
-print(xtable(Full_Model_Info_fin_Acc, type = "latex"), file = "C:/Users/doex9445/Dateien/Julius/AdaptiveControl/Data/Bheav_Summary_RT.tex")
+#save data
+write.table(Full_Model_Info , file = "E:/20Hz/Data/Modelle/Full_Results_GNG.csv")
