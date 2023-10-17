@@ -70,7 +70,7 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object List Wide
-m1_SRT <- bf(RT_ms ~ 1  + StimCon + (StimCon|Part_nr))
+m1_SRT <- bf(RT_ms ~ 1  + StimCon + (1|Part_nr))
 
 #get_prior(formula = m1_SRT, data = RT_data, family = shifted_lognormal())
 
@@ -122,7 +122,7 @@ post_eff <- fit_shifted_log_SRT %>%
 ## Next, let us look at the accuracy data
 
 prior_weakly_informed_logreg <- c(
-  prior(normal(-0.6, 0.6), class = Intercept),
+  prior(normal(-2, 1), class = Intercept),
   prior(normal(0,  1.5), class = b, coef = StimConS130_S20), 
   prior(normal(0,  1.5), class = b, coef = StimConS20_SOFF),
   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
@@ -132,7 +132,7 @@ prior_weakly_informed_logreg <- c(
 #get_prior(formula = m1_SRT_log, data = RT_data, family = bernoulli(link = logit))
 
 # brmsformula object Item Specific
-m1_SRT_log <- bf(Error ~ 1  + StimCon + (StimCon|Part_nr)) 
+m1_SRT_log <- bf(Error ~ 1  + StimCon + (1|Part_nr)) 
 
 #### Fit Inducer Models ####
 
@@ -148,8 +148,8 @@ fit_logReg_SRT <- brm(formula = m1_SRT_log,
                                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                                   chains =4)
 
-save(fit_logReg_SRT, file = "E:/20Hz/Data/Modelle/logreg_SRT.rda")
-load(file = "E:/20Hz/Data/Modelle/logreg_SRT.rda")
+save(fit_logReg_SRT, file = "E:/20Hz/Data/Modelle/log_reg_SRT.rda")
+load(file = "E:/20Hz/Data/Modelle/log_reg_SRT.rda")
 # posteriro predictive checks
 pp_check(fit_logReg_SRT, ndraws = 11, type = "hist")
 # Looks good for this model

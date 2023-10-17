@@ -197,8 +197,8 @@ contrasts(GoNoGo$Contrast_F) <- contr.hypothesis(GoNoGo_Contrast_Acc)
 contrasts(GoNoGo$Contrast_F)
 
 # brmsformula object Item Specific
-m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
-m1_GoNoGo_log <- bf(Error ~ 1  + Stim_verb * GoNoGo + (Stim_verb * GoNoGo|Part_nr)) 
+m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (1|Part_nr)) 
+m1_GoNoGo_log <- bf(Error ~ 1  + Stim_verb * GoNoGo + (1|Part_nr)) 
 
 #get_prior(formula =  m1_GoNoGo_log, data = GoNoGo, family = bernoulli(link = logit))
 

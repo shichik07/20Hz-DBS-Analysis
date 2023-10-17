@@ -29,8 +29,6 @@ FLTRT<- read_csv(file = "flanker.csv") %>%
     
   )))
 
-contrasts(FLTRT$StimCon)
-
 
 # create a contrast matrix for our comparisons of interest
 # Contrasts only for the list-wide effect only
@@ -92,7 +90,7 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object List Wide
-m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (Contrast_F|Part_nr))
+m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (1|Part_nr))
 
 #get_prior(formula = m1_FLT, data = RT_data, family = shifted_lognormal())
 
@@ -159,7 +157,7 @@ post_eff <- fit_shifted_log_FLT %>%
 ## Next, let us look at the accuracy data
 
 prior_weakly_informed_logreg<- c(
-  prior(normal(-0.6, 0.6), class = Intercept),
+  prior(normal(-2, 1), class = Intercept),
   prior(normal(0,  1.5), class = b, coef = Contrast_FCongruency), 
   prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20v130),
   prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20vOFF), 
@@ -172,7 +170,7 @@ prior_weakly_informed_logreg<- c(
 #get_prior(formula = m1_SRT, data = RT_data, family = bernoulli(link = logit))
 
 # brmsformula object Item Specific
-m1_FLT_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr)) 
+m1_FLT_log <- bf(Error ~ 1  + Contrast_F + (1|Part_nr)) 
 
 #### Fit Inducer Models ####
 
