@@ -20,6 +20,60 @@ set.seed(32936)
 
 setwd('E:/20Hz/Data/Modelle/BF_mods')
 
+
+###### Functions:
+
+pass_brms = function(save_name, prior, data, model) {
+  # performs a shifted log regression
+  #
+  # Args:
+  #   save_name: string of save location where the partial model is saved
+  #   prior: list of of formulas for the prior distributions
+  #   data: tibble with the data to be fit
+  #   model: formula object with the model definition
+  # Returns:
+  #   The specified (brmsfit) 
+  fit_model <- brm(formula = model,
+                   family = shifted_lognormal(),
+                   data = data,
+                   prior = prior,
+                   warmup = 2000,
+                   iter = 12000,# 20000 is the limit necessary for bridge sampling
+                   cores = 4, seed = 423,
+                   control = list(adapt_delta = 0.95),
+                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
+                   chains =4)
+  
+  # save the model
+  save(fit_model, file = save_name)
+}
+
+pass_brms_log = function(save_name, prior, data, model) {
+  # performs a logistic regression
+  #
+  # Args:
+  #   save_name: string of save location where the partial model is saved
+  #   prior: list of of formulas for the prior distributions
+  #   data: tibble with the data to be fit
+  #   model: formula object with the model definition
+  # Returns:
+  #   The specified (brmsfit) 
+  fit_model <- brm(formula = model,
+                   family = bernoulli(link = logit),
+                   data = data,
+                   prior = prior,
+                   warmup = 2000,
+                   iter = 12000,# 20000 is the limit necessary for bridge sampling
+                   cores = 4, seed = 423,
+                   control = list(adapt_delta = 0.95),
+                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
+                   chains =4)
+  
+  # save the model
+  save(fit_model, file = save_name)
+}
+
+
 # load data
 GoNoGo<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/GoNoGo.csv") %>%
   mutate(Error = 1 - Correct_Response) %>%
@@ -79,23 +133,6 @@ prior_weakly_informed<- c(
   prior(normal(0,  0.3), class = b, coef = SOFF),
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
-
-# okay create a function to pass model parameter
-pass_brms = function(save_name, prior, data, model) {
-  fit_model <- brm(formula = model,
-                   family = shifted_lognormal(),
-                   data = data,
-                   prior = prior,
-                   warmup = 2000,
-                   iter = 12000,# 20000 is the limit necessary for bridge sampling
-                   cores = 4, seed = 423,
-                   control = list(adapt_delta = 0.95),
-                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
-                   chains =4)
-  
-  # save the model
-  save(fit_model, file = save_name)
-}
 
 ##### now let us loop though our models and save the results 
 for(mods in 1:length(GNG_mods)){
@@ -173,24 +210,7 @@ prior_weakly_informed_log<- c(
 )
 
 # brmsformula object RT analysis
-m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (Contrast_F|Part_nr))
-
-# okay create a function to pass model parameter
-pass_brms_log = function(save_name, prior, data, model) {
-  fit_model <- brm(formula = model,
-                   family = bernoulli(link = logit),
-                   data = data,
-                   prior = prior,
-                   warmup = 2000,
-                   iter = 12000,# 20000 is the limit necessary for bridge sampling
-                   cores = 4, seed = 423,
-                   control = list(adapt_delta = 0.95),
-                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
-                   chains =4)
-  
-  # save the model
-  save(fit_model, file = save_name)
-}
+m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (1|Part_nr))
 
 ##### now let us loop though our models and save the results 
 for(mods in 1:length(GNG_acc_mods)){
@@ -203,3 +223,316 @@ for(mods in 1:length(GNG_acc_mods)){
   # fit the model
   pass_brms_log(save_name = save_name, prior = Prior_weakly, data = GoNoGo, model = m1_GoNoGo_log)
 } 
+
+##### Now the same for the Flanker RT data
+
+# load data
+FLTRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/flanker.csv") %>%
+  mutate(Error = 1 - Correct_Response) %>%
+  mutate(StimCon = as_factor(case_when(
+    Stim_verb == "130Hz" ~ "S130Hz",
+    Stim_verb == "20Hz" ~ "S20Hz",
+    Stim_verb == "OFF" ~ "SOFF",
+  )))%>%
+  mutate(Contrast_F = as_factor(case_when(
+    Stim_verb == "130Hz" & Congruency == "congruent" ~ "S130Hz_congruent",
+    Stim_verb == "130Hz" & Congruency == "incongruent" ~ "S130Hz_incongruent",
+    Stim_verb == "20Hz" & Congruency == "congruent" ~ "S20Hz_congruent",
+    Stim_verb == "20Hz" & Congruency == "incongruent" ~ "S20Hz_incongruent",
+    Stim_verb == "OFF" & Congruency == "congruent" ~ "SOFF_congruent",
+    Stim_verb == "OFF" & Congruency == "incongruent" ~ "SOFF_incongruent",
+  )))
+
+RT_data_FLT <- FLTRT %>%
+  filter(Correct_Response == 1,
+         RT <3,
+         RT > 0.2) %>%
+  mutate(RT_ms = RT*1000)
+
+# Define formulas so we can loop through them
+FLT_RT_formulas <- c(
+  formula((S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3), # main Congruency
+  formula((S20Hz_incongruent + S20Hz_congruent)/2 ~ (S130Hz_incongruent + S130Hz_congruent)/2), # Overall effect LFS vs HFS
+  formula((S20Hz_incongruent + S20Hz_congruent)/2 ~ (SOFF_incongruent + SOFF_congruent)/2), # Overall effect LFS vs OFF
+  formula((S20Hz_incongruent - S20Hz_congruent) ~ (S130Hz_incongruent - S130Hz_congruent)), # Difference Congruency effects LFS vs HFS
+  formula((S20Hz_incongruent - S20Hz_congruent) ~ (SOFF_incongruent - SOFF_congruent)) # Difference Congruency effects LFS vs OFF
+)
+
+# contrast names separately
+FLT_RT_contrast_names <- c(
+  "Congruency",
+  "Stim_20v130",
+  "Stim_20vOFF",
+  "Stroop_20v130",
+  "Stroop_20vOFF"
+)
+
+
+# FLT levels
+FLT_RT_levels <- c("S130Hz_incongruent", "S130Hz_congruent", "SOFF_congruent", 
+                    "SOFF_incongruent", "S20Hz_incongruent", "S20Hz_congruent")
+
+FLT_RT_mods <- c("FLT_min_Congruency", 
+                  "FLT_min_Stim_20v130",
+                  "FLT_min_Stim_20vOFF",
+                  "FLT_min_Stroop_20v130",
+                  "FLT_min_Stroop_20vOFF")
+
+# First let us get the model contrasts
+for(mods in 1:length(FLT_RT_mods)){
+  # first create the contrast matrix
+  temp_mat <- hypr(FLT_RT_formulas[-(mods)],
+                   levels = FLT_RT_levels)
+  # next add the appropriate variable names
+  names(temp_mat) <- FLT_RT_contrast_names[-(mods)]
+  
+  # Lastly rename the contrast matrix
+  assign(FLT_RT_mods[mods], temp_mat)
+}
+
+# Prior informed weakly Item Specific
+prior_weakly_informed_FLT<- c(
+  prior(normal(6.5, 0.5), class = Intercept, lb = 0),
+  prior(normal(0 ,0.5), class = sigma, lb = 0),
+  prior(uniform(0, min_Y), class = ndt),
+  prior(normal(0,  0.3), class = b, coef = Contrast_FCongruency), 
+  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20v130),
+  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF), 
+  prior(normal(0,  0.3), class = b, coef = Contrast_FStroop_20v130),
+  prior(normal(0,  0.3), class = b, coef = Contrast_FStroop_20vOFF),
+  prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
+)
+
+
+# brmsformula object List Wide
+m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (1|Part_nr))
+
+##### now let us loop though our models and save the results 
+for(mods in 1:length(FLT_RT_mods)){
+  # first assign appropriate contrasts to our dataset 
+  contrasts(RT_data_FLT$Contrast_F) <- contr.hypothesis(eval(parse(text = FLT_RT_mods[mods])))
+  # define prior
+  Prior_weakly <- prior_weakly_informed_FLT[-(mods+3),]
+  # get save name for variable
+  save_name <- paste("FLT_RT_", FLT_RT_mods[mods], ".rda", sep = "")
+  # fit the model
+  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data_FLT, model = m1_FLT)
+} 
+
+
+##### Now the same for the Flanker Error data
+
+
+# Define formulas so we can loop through them
+FLT_acc_formulas <- c(
+  formula((S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3), # main Congruency
+  formula((S20Hz_incongruent + S20Hz_congruent)/2 ~ (S130Hz_incongruent + S130Hz_congruent)/2), # Overall effect LFS vs HFS
+  formula((S20Hz_incongruent + S20Hz_congruent)/2 ~ (SOFF_incongruent + SOFF_congruent)/2), # Overall effect LFS vs OFF
+  formula((S20Hz_incongruent - S20Hz_congruent) ~ (S130Hz_incongruent - S130Hz_congruent)), # Difference Congruency effects LFS vs HFS
+  formula((S20Hz_incongruent - S20Hz_congruent) ~ (SOFF_incongruent - SOFF_congruent)) # Difference Congruency effects LFS vs OFF
+)
+
+# contrast names separately
+FLT_acc_contrast_names <- c(
+  "Congruency",
+  "Stim_20v130",
+  "Stim_20vOFF",
+  "Stroop_20v130",
+  "Stroop_20vOFF"
+)
+
+
+# FLT levels
+FLT_acc_levels <- c("S130Hz_incongruent", "S130Hz_congruent", "SOFF_congruent", 
+                   "SOFF_incongruent", "S20Hz_incongruent", "S20Hz_congruent")
+
+FLT_acc_mods <- c("FLT_min_Congruency", 
+                 "FLT_min_Stim_20v130",
+                 "FLT_min_Stim_20vOFF",
+                 "FLT_min_Stroop_20v130",
+                 "FLT_min_Stroop_20vOFF")
+
+# First let us get the model contrasts
+for(mods in 1:length(FLT_acc_mods)){
+  # first create the contrast matrix
+  temp_mat <- hypr(FLT_acc_formulas[-(mods)],
+                   levels = FLT_acc_levels)
+  # next add the appropriate variable names
+  names(temp_mat) <- FLT_acc_contrast_names[-(mods)]
+  
+  # Lastly rename the contrast matrix
+  assign(FLT_acc_mods[mods], temp_mat)
+}
+
+# Prior informed weakly Item Specific
+prior_weakly_informed_FLT_acc<- c(
+  prior(normal(-2, 1), class = Intercept),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FCongruency), 
+  prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20v130),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FStim_20vOFF), 
+  prior(normal(0,  1.5), class = b, coef = Contrast_FStroop_20v130),
+  prior(normal(0,  1.5), class = b, coef = Contrast_FStroop_20vOFF),
+  prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
+)
+
+
+# brmsformula object List Wide
+m1_FLT <- bf(Error ~ 1  + Contrast_F + (1|Part_nr))
+
+##### now let us loop though our models and save the results 
+for(mods in 1:length(FLT_acc_mods)){
+  # first assign appropriate contrasts to our dataset 
+  contrasts(FLTRT$Contrast_F) <- contr.hypothesis(eval(parse(text = FLT_acc_mods[mods])))
+  # define prior
+  Prior_weakly <- prior_weakly_informed_FLT_acc[-(mods+1),]
+  # get save name for variable
+  save_name <- paste("FLT_acc_", FLT_acc_mods[mods], ".rda", sep = "")
+  # fit the model
+  pass_brms_log(save_name = save_name, prior = Prior_weakly, data = FLTRT, model = m1_FLT)
+} 
+
+##### And lastly lets do it for the SRT data again
+
+# load data
+SimpleRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/SimpleRT.csv") %>%
+  mutate(Error = 1 - Correct_Response) %>%
+  mutate(StimCon = as_factor(case_when(
+    Stim_verb == "130Hz" ~ "S130Hz",
+    Stim_verb == "20Hz" ~ "S20Hz",
+    Stim_verb == "OFF" ~ "SOFF",
+    
+  )))
+
+# for the RT analysis we filter only correct trials, and exclude trials shorter 
+# than 200ms a longer than 2s
+RT_data_SRT <- SimpleRT %>%
+  filter(Correct_Response == 1,
+         RT <3,
+         RT > 0.2) %>%
+  mutate(RT_ms = RT*1000)
+
+# create a contrast matrix for our comparisons of interest
+# Contrasts only for the list-wide effect only
+SRT_Contrast <- hypr(
+  S130_S20 = S20Hz ~ S130Hz, 
+  S20_SOFF = S20Hz ~ SOFF, 
+  levels = c("S130Hz", "SOFF", "S20Hz")
+)
+SRT_Contrast
+
+# Define formulas so we can loop through them
+SRT_RT_formulas <- c(
+  formula(S20Hz ~ S130Hz), # Overall effect LFS vs HFS
+  formula(S20Hz ~ SOFF) # Overall effect LFS vs OFF
+)
+
+# contrast names separately
+SRT_RT_contrast_names <- c(
+  "Stim_20v130",
+  "Stim_20vOFF"
+)
+
+
+# SRT levels
+SRT_RT_levels <- c("S130Hz", "SOFF", "S20Hz")
+
+SRT_RT_mods <- c("SRT_min_Stim_20v130",
+                 "SRT_min_Stim_20vOFF"
+                 )
+
+# First let us get the model contrasts
+for(mods in 1:length(SRT_RT_mods)){
+  # first create the contrast matrix
+  temp_mat <- hypr(SRT_RT_formulas[-(mods)],
+                   levels = SRT_RT_levels)
+  # next add the appropriate variable names
+  names(temp_mat) <- SRT_RT_contrast_names[-(mods)]
+  
+  # Lastly rename the contrast matrix
+  assign(SRT_RT_mods[mods], temp_mat)
+}
+
+# Prior informed weakly Item Specific
+prior_weakly_informed_SRT<- c(
+  prior(normal(6.5, 0.5), class = Intercept, lb = 0),
+  prior(normal(0 ,0.5), class = sigma, lb = 0),
+  prior(uniform(0, min_Y), class = ndt),
+  prior(normal(0,  0.1), class = b, coef = StimConS130_S20), 
+  prior(normal(0,  0.1), class = b, coef = StimConS20_SOFF),
+  prior(normal(0,  0.1), class = sd, coef = Intercept, group = Part_nr)
+)
+
+
+# brmsformula object List Wide
+m1_SRT <- bf(RT_ms ~ 1  + StimCon + (1|Part_nr))
+
+##### now let us loop though our models and save the results 
+for(mods in 1:length(SRT_RT_mods)){
+  # first assign appropriate contrasts to our dataset 
+  contrasts(RT_data_SRT$StimCon) <- contr.hypothesis(eval(parse(text = SRT_RT_mods[mods])))
+  # define prior
+  Prior_weakly <- prior_weakly_informed_SRT[-(mods+3),]
+  # get save name for variable
+  save_name <- paste("SRT_RT_", SRT_RT_mods[mods], ".rda", sep = "")
+  # fit the model
+  pass_brms(save_name = save_name, prior = Prior_weakly, data = RT_data_SRT, model = m1_SRT)
+} 
+
+##### Now the same for the SRT Error data
+
+# Define formulas so we can loop through them
+SRT_acc_formulas <- c(
+  formula(S20Hz ~ S130Hz), # Overall effect LFS vs HFS
+  formula(S20Hz ~ SOFF) # Overall effect LFS vs OFF
+)
+
+# contrast names separately
+SRT_acc_contrast_names <- c(
+  "Stim_20v130",
+  "Stim_20vOFF"
+)
+
+
+# SRT levels
+SRT_acc_levels <- c("S130Hz", "SOFF", "S20Hz")
+
+SRT_acc_mods <- c("SRT_min_Stim_20v130",
+                  "SRT_min_Stim_20vOFF"
+)
+
+# First let us get the model contrasts
+for(mods in 1:length(SRT_acc_mods)){
+  # first create the contrast matrix
+  temp_mat <- hypr(SRT_acc_formulas[-(mods)],
+                   levels = SRT_acc_levels)
+  # next add the appropriate variable names
+  names(temp_mat) <- SRT_acc_contrast_names[-(mods)]
+  
+  # Lastly rename the contrast matrix
+  assign(SRT_acc_mods[mods], temp_mat)
+}
+
+# Prior informed weakly Item Specific
+prior_weakly_informed_SRT_acc<- c(
+  prior(normal(-2, 1), class = Intercept),
+  prior(normal(0,  1.5), class = b, coef = StimConS130_S20), 
+  prior(normal(0,  1.5), class = b, coef = StimConS20_SOFF),
+  prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
+)
+
+
+# brmsformula object List Wide
+m1_SRT <- bf(Error ~ 1  + Contrast_F + (1|Part_nr))
+
+##### now let us loop though our models and save the results 
+for(mods in 1:length(SRT_acc_mods)){
+  # first assign appropriate contrasts to our dataset 
+  contrasts(SimpleRT$Contrast_F) <- contr.hypothesis(eval(parse(text = SRT_acc_mods[mods])))
+  # define prior
+  Prior_weakly <- prior_weakly_informed_SRT_acc[-(mods+1),]
+  # get save name for variable
+  save_name <- paste("SRT_acc_", SRT_acc_mods[mods], ".rda", sep = "")
+  # fit the model
+  pass_brms_log(save_name = save_name, prior = Prior_weakly, data = SimpleRT, model = m1_SRT)
+} 
+
