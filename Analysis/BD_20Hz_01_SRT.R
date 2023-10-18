@@ -63,9 +63,9 @@ prior_weakly_informed<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
   prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.1), class = b, coef = StimConS130_S20), 
-  prior(normal(0,  0.1), class = b, coef = StimConS20_SOFF),
-  prior(normal(0,  0.1), class = sd, coef = Intercept, group = Part_nr)
+  prior(normal(0,  0.3), class = b, coef = StimConS130_S20), 
+  prior(normal(0,  0.3), class = b, coef = StimConS20_SOFF),
+  prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
 
