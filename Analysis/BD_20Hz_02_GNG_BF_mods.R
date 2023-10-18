@@ -523,12 +523,12 @@ prior_weakly_informed_SRT_acc<- c(
 
 
 # brmsformula object List Wide
-m1_SRT <- bf(Error ~ 1  + Contrast_F + (1|Part_nr))
+m1_SRT <- bf(Error ~ 1  + StimCon + (1|Part_nr))
 
 ##### now let us loop though our models and save the results 
 for(mods in 1:length(SRT_acc_mods)){
   # first assign appropriate contrasts to our dataset 
-  contrasts(SimpleRT$Contrast_F) <- contr.hypothesis(eval(parse(text = SRT_acc_mods[mods])))
+  contrasts(SimpleRT$StimCon) <- contr.hypothesis(eval(parse(text = SRT_acc_mods[mods])))
   # define prior
   Prior_weakly <- prior_weakly_informed_SRT_acc[-(mods+1),]
   # get save name for variable
