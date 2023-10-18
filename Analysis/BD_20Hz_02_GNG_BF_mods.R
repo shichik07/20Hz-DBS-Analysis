@@ -457,14 +457,15 @@ prior_weakly_informed_SRT<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
   prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.1), class = b, coef = StimConS130_S20), 
-  prior(normal(0,  0.1), class = b, coef = StimConS20_SOFF),
-  prior(normal(0,  0.1), class = sd, coef = Intercept, group = Part_nr)
+  prior(normal(0,  0.3), class = b, coef = StimConStim_20v130), 
+  prior(normal(0,  0.3), class = b, coef = StimConStim_20vOFF),
+  prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
 
 # brmsformula object List Wide
 m1_SRT <- bf(RT_ms ~ 1  + StimCon + (1|Part_nr))
+
 
 ##### now let us loop though our models and save the results 
 for(mods in 1:length(SRT_RT_mods)){
@@ -515,8 +516,8 @@ for(mods in 1:length(SRT_acc_mods)){
 # Prior informed weakly Item Specific
 prior_weakly_informed_SRT_acc<- c(
   prior(normal(-2, 1), class = Intercept),
-  prior(normal(0,  1.5), class = b, coef = StimConS130_S20), 
-  prior(normal(0,  1.5), class = b, coef = StimConS20_SOFF),
+  prior(normal(0,  1.5), class = b, coef = StimConStim_20v130), 
+  prior(normal(0,  1.5), class = b, coef = StimConStim_20vOFF),
   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
 )
 
