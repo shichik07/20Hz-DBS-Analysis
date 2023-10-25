@@ -117,7 +117,7 @@ BF_calc <- function(fullmod_loc, part_mod_loc, parameter, ana, model_t){
   return(Model_BF)
 }
 
-conditional_effect_calc_shift <- function(model){
+conditional_effect_calc_shift_GNG <- function(model){
   # calculate effect estimates in ms or percent
   # Args:
   #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
@@ -145,7 +145,7 @@ conditional_effect_calc_shift <- function(model){
   return(summary(model_effects))
 }
 
-conditional_effect_calc_acc <- function(model){
+conditional_effect_calc_acc_GNG <- function(model){
   # calculate effect estimates in ms or percent
   # Args:
   #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
@@ -177,51 +177,101 @@ conditional_effect_calc_acc <- function(model){
 
 # contrast names seperately
 
-fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
-part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
-parameter_RT <- c("GoDiff_20v130",
+#fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
+#part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
+parameter_RT_GNG <- c("GoDiff_20v130",
                "GoDiff_20vOFF")
 
-parameter_Acc <- c(
+parameter_Acc_GNG <- c(
   "NoGo_Stop_20Hz_vs_130Hz",
   "NoGo_Stop_20Hz_vs_OFF",
   "NoGo_Go_20Hz_vs_130Hz",
   "NoGo_Go_20Hz_vs_OFF"
 )
 
-ana <- "GNG"
-model_RT <- "RT"
-model_Acc <- "Acc"
+parameter_SRT <- c(
+  "Stim_20v130",
+  "Stim_20vOFF"
+)
+
+parameter_FLT <- c(
+  "Congruency",
+  "Stim_20v130",
+  "Stim_20vOFF",
+  "Stroop_20v130",
+  "Stroop_20vOFF"
+)
+
+#model_RT <- "RT"
+#model_Acc <- "Acc"
 
 Partial_models_saveloc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
 Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
 
-# calculate BFs for the RT data
+# calculate BFs for the RT data of the GNG task
 BF_Results <- BF_calc(fullmod_loc = Full_models_saveloc, 
                       part_mod_loc = Partial_models_saveloc, 
-                      parameter = parameter_RT, 
-                      ana = ana, 
-                      model_t = model_RT)
+                      parameter = parameter_RT_GNG, 
+                      ana = "GNG", 
+                      model_t = "RT")
 
 #save data
 
-# Now the same for the Acc data 
+# Now the same for the Acc data of the GNG task
 BF_Results <- BF_Results %>%
   bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
                       part_mod_loc = Partial_models_saveloc, 
-                      parameter = parameter_Acc, 
-                      ana = ana, 
-                      model_t = model_Acc))
+                      parameter = parameter_Acc_GNG, 
+                      ana = "GNG", 
+                      model_t = "Acc"))
+
+# Now the same for the SRT task for the RT analysis
+BF_Results <- BF_Results %>%
+  bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
+                    part_mod_loc = Partial_models_saveloc, 
+                    parameter = parameter_SRT, 
+                    ana = "SRT", 
+                    model_t = "RT"))
+
+# Now the same for the SRT task for the accuracy analysis
+BF_Results <- BF_Results %>%
+  bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
+                    part_mod_loc = Partial_models_saveloc, 
+                    parameter = parameter_SRT, 
+                    ana = "SRT", 
+                    model_t = "Acc"))
+
+# Now the same for the SRT task for the RT analysis
+BF_Results <- BF_Results %>%
+  bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
+                    part_mod_loc = Partial_models_saveloc, 
+                    parameter = parameter_FLT, 
+                    ana = "FLT", 
+                    model_t = "RT"))
 
 
+# Now the same for the FLT task for the accuracy analysis
+BF_Results <- BF_Results %>%
+  bind_rows(BF_calc(fullmod_loc = Full_models_saveloc, 
+                    part_mod_loc = Partial_models_saveloc, 
+                    parameter = parameter_FLT, 
+                    ana = "FLT", 
+                    model_t = "Acc"))
+
+
+full_model <- load_full_mod(loc = Full_models_saveloc, 
+                            ana = "SRT", 
+                            model_t = "RT")
 
 #save data
-write.table(BF_Results , file = "E:/20Hz/Data/Modelle/BF_Results_GNG.csv")
+write.table(BF_Results , file = "E:/20Hz/Data/Modelle/BF_Results.csv")
 
 # load data again
-BF_Results <- read.csv(file = "E:/20Hz/Data/Modelle/BF_Results_GNG.csv", header = TRUE, sep = "")
+BF_Results <- read.csv(file = "E:/20Hz/Data/Modelle/BF_Results.csv", header = TRUE, sep = "")
 #### Now that we have the table with our BFs, let us load the parameter estimates
 
+BF_Results_round <- BF_Results
+BF_Results_round$BF <- round(BF_Results_round$BF, 2)
 # New Tibble
 Full_Model_Info <- BF_Results %>%
   mutate(estimate = NA , lower.HPD = NA, upper.HPD = NA) 
@@ -231,15 +281,15 @@ mods = c("RT", "Acc")
 
 for (md in mods) {
   #load model
-  full_model <- load_full_mod(loc = fullmod_loc, 
+  full_model <- load_full_mod(loc = Full_models_saveloc, 
                               ana = ana, 
                               model_t = md)
   
   # calculate posterior conditional effect samples
   if (md == "RT"){
-    eff_post <- conditional_effect_calc_shift(model = full_model)
+    eff_post <- conditional_effect_calc_shift_GNG(model = full_model)
   } else if (md == "Acc"){
-    eff_post <- conditional_effect_calc_acc(model = full_model)
+    eff_post <- conditional_effect_calc_acc_GNG(model = full_model)
   }
   
   #integrate summary stats into BF table
