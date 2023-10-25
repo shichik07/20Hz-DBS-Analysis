@@ -16,6 +16,7 @@ library(StanHeaders)
 library(rstudioapi)
 library(xtable)
 library(stringr)
+library(emmeans)
 
 
 # Set a seed for sake of reproducibility
@@ -170,6 +171,38 @@ conditional_effect_calc_acc_GNG <- function(model){
                                                       "NoGo_Stop_20Hz_vs_OFF" = S20Hz_NoGo - SOFF_NoGo,
                                                       "NoGo_Go_20Hz_vs_130Hz" = S20Hz_NoGo_Go - S130Hz_NoGo_Go,
                                                       "NoGo_Go_20Hz_vs_OFF"= S20Hz_NoGo_Go - SOFF_NoGo_Go)) 
+  return(summary(model_effects))
+}
+
+conditional_effect_calc_SRT <- function(model){
+ model <- load_full_mod(loc = Full_models_saveloc, 
+                              ana = "SRT", 
+                              model_t = "RT")
+  
+  # calculate effect estimates in ms or percent
+  # Args:
+  #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: string indicating which parameter the model should be lacking and depends on ana
+  # Returns:
+  #   summary(model_effects): Table with summarizing the posterior distribution of effect estimates, median, upper and lower 95% hpd interval boundaries
+  
+  
+  # get posterior samples to calculate conditional effects
+  # first calculate the estimated marginal means
+  emm_SRT <- emmeans(model, ~ StimCon, epred = TRUE)
+  S130Hz_NoGo_Go <- c(0, 1, 0, 0, 0, 0, 0, 0, 0)
+  S130Hz_NoGo <- c(1, 0, 0, 0, 0, 0, 0, 0, 0)
+  SOFF_NoGo <- c(0, 0, 0, 0, 1, 0, 0, 0, 0)
+  SOFF_NoGo_Go <- c(0, 0, 0, 0, 0, 1, 0, 0, 0)
+  S20Hz_NoGo_Go <- c(0, 0, 0, 0, 0, 0, 0, 1, 0)
+  S20Hz_NoGo <- c(0, 0, 0, 0, 0, 0, 1, 0, 0)
+  
+  
+  # Next we calculate the contrasts of interest from these marginal means
+  model_effects <- contrast(emm_GNG_Acc , method = list("NoGo_Stop_20Hz_vs_130Hz" = S20Hz_NoGo - S130Hz_NoGo,
+                                                        "NoGo_Stop_20Hz_vs_OFF" = S20Hz_NoGo - SOFF_NoGo,
+                                                        "NoGo_Go_20Hz_vs_130Hz" = S20Hz_NoGo_Go - S130Hz_NoGo_Go,
+                                                        "NoGo_Go_20Hz_vs_OFF"= S20Hz_NoGo_Go - SOFF_NoGo_Go)) 
   return(summary(model_effects))
 }
 
