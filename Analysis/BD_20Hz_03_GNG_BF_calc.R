@@ -175,10 +175,6 @@ conditional_effect_calc_acc_GNG <- function(model){
 }
 
 conditional_effect_calc_SRT <- function(model){
- model <- load_full_mod(loc = Full_models_saveloc, 
-                              ana = "SRT", 
-                              model_t = "RT")
-  
   # calculate effect estimates in ms or percent
   # Args:
   #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
@@ -190,19 +186,50 @@ conditional_effect_calc_SRT <- function(model){
   # get posterior samples to calculate conditional effects
   # first calculate the estimated marginal means
   emm_SRT <- emmeans(model, ~ StimCon, epred = TRUE)
-  S130Hz_NoGo_Go <- c(0, 1, 0, 0, 0, 0, 0, 0, 0)
-  S130Hz_NoGo <- c(1, 0, 0, 0, 0, 0, 0, 0, 0)
-  SOFF_NoGo <- c(0, 0, 0, 0, 1, 0, 0, 0, 0)
-  SOFF_NoGo_Go <- c(0, 0, 0, 0, 0, 1, 0, 0, 0)
-  S20Hz_NoGo_Go <- c(0, 0, 0, 0, 0, 0, 0, 1, 0)
-  S20Hz_NoGo <- c(0, 0, 0, 0, 0, 0, 1, 0, 0)
+  S130Hz <- c(1, 0, 0)
+  SOFF <- c(0, 1, 0)
+  S20Hz <- c(0, 0, 1)
   
   
   # Next we calculate the contrasts of interest from these marginal means
-  model_effects <- contrast(emm_GNG_Acc , method = list("NoGo_Stop_20Hz_vs_130Hz" = S20Hz_NoGo - S130Hz_NoGo,
-                                                        "NoGo_Stop_20Hz_vs_OFF" = S20Hz_NoGo - SOFF_NoGo,
-                                                        "NoGo_Go_20Hz_vs_130Hz" = S20Hz_NoGo_Go - S130Hz_NoGo_Go,
-                                                        "NoGo_Go_20Hz_vs_OFF"= S20Hz_NoGo_Go - SOFF_NoGo_Go)) 
+  model_effects <- contrast(emm_SRT , method = list("Stim_20v130" = S20Hz - S130Hz,
+                                                        "Stim_20vOFF" = S20Hz - SOFF
+                                                        )) 
+  return(summary(model_effects))
+}
+
+conditional_effect_calc_FLT <- function(model){
+  model <- load_full_mod(loc = Full_models_saveloc, 
+                ana = "FLT", 
+                model_t = "RT")
+  # calculate effect estimates in ms or percent
+  # Args:
+  #   model: string for the model we are interested in "RT" for shifted log-normal, "Acc" for the logistic regression
+  #   parameter: string indicating which parameter the model should be lacking and depends on ana
+  # Returns:
+  #   summary(model_effects): Table with summarizing the posterior distribution of effect estimates, median, upper and lower 95% hpd interval boundaries
+  
+  
+  # get posterior samples to calculate conditional effects
+  # first calculate the estimated marginal means
+  emm_FLT <- emmeans(model, ~ Contrast_F, epred = TRUE)
+  S130Hz_incongruent <- c(1, 0, 0, 0, 0, 0)
+  S130Hz_congruent <- c(0, 1, 0, 0, 0, 0)
+  SOFF_congruent <- c(0, 0, 1, 0, 0, 0)
+  SOFF_incongruent <- c(0, 0, 0, 1, 0, 0)
+  S20Hz_incongruent <- c(0, 0, 0, 0, 1, 0)
+  S20Hz_congruent <- c(0, 0, 0, 0, 0, 1)
+  
+  
+  # Next we calculate the contrasts of interest from these marginal means
+  model_effects <- contrast(emm_SRT , method = list("Congruency" = (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3 -
+                                                      (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3,
+                                                    "Stim_20v130" = (S20Hz_incongruent + S20Hz_congruent)/2 - (S130Hz_incongruent + S130Hz_congruent)/2,
+                                                    "Stim_20vOFF" = (S20Hz_incongruent + S20Hz_congruent)/2 - (SOFF_incongruent + SOFF_congruent)/2,
+                                                    "Stroop_20v130"=(S20Hz_incongruent - S20Hz_congruent) - (S130Hz_incongruent - S130Hz_congruent),
+                                                    "Stroop_20vOFF"=(S20Hz_incongruent - S20Hz_congruent) - (SOFF_incongruent - SOFF_congruent)))
+                                                    
+  
   return(summary(model_effects))
 }
 
