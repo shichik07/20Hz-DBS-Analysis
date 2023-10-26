@@ -17,6 +17,7 @@ library(rstudioapi)
 library(xtable)
 library(stringr)
 library(emmeans)
+library(tidybayes)
 
 
 # Set a seed for sake of reproducibility
@@ -174,6 +175,53 @@ conditional_effect_calc_acc_GNG <- function(model){
   return(summary(model_effects))
 }
 
+brms_epred_calc_SRT <- function(model, ana){
+  preds <- brms::posterior_epred(model)
+  # load FLT data
+  SimpleRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/SimpleRT.csv") %>%
+    mutate(Error = 1 - Correct_Response) %>%
+    mutate(StimCon = as_factor(case_when(
+      Stim_verb == "130Hz" ~ "S130Hz",
+      Stim_verb == "20Hz" ~ "S20Hz",
+      Stim_verb == "OFF" ~ "SOFF"
+    ))) 
+  
+  # filter the data more for the RT analysis
+  if (ana == "RT") {SimpleRT %>%
+      filter(Correct_Response == 1,
+             RT <3,
+             RT > 0.2) %>%
+      mutate(RT_ms = RT*1000)}
+  
+  # create a contrast matrix for our comparisons of interest
+  # Contrasts only for the list-wide effect only
+  SRT_Contrast <- hypr(
+    S130_S20 = S20Hz ~ S130Hz, 
+    S20_SOFF = S20Hz ~ SOFF, 
+    levels = c("S130Hz", "SOFF", "S20Hz")
+  )
+  SRT_Contrast
+  
+  # assign the generated contrast matrix to the List Wide Factor
+  contrasts(SimpleRT$StimCon) <- contr.hypothesis(SRT_Contrast)
+  contrasts(SimpleRT$StimCon)   
+  
+  # calculate contrasts
+  S130Hz <- rowMeans(preds[,SimpleRT$StimCon == "S130Hz"])
+  S20Hz <- rowMeans(preds[,SimpleRT$StimCon == "S20Hz"])
+  SOFF <- rowMeans(preds[,SimpleRT$StimCon == "SOFF"])
+  
+  
+  model_effects <- tibble(contrast = c("Stim_20v130", "Stim_20vOFF"))
+  Stim_20v130 <- tidybayes::mean_hdi((S20Hz - S130Hz))
+  Stim_20vOFF <- tidybayes::mean_hdi((S20Hz - SOFF))
+  
+  model_effects<- model_effects %>%
+    bind_cols(bind_rows(Stim_20v130, Stim_20vOFF))
+  
+  return(model_effects)
+}
+
 conditional_effect_calc_SRT <- function(model){
   # calculate effect estimates in ms or percent
   # Args:
@@ -196,6 +244,73 @@ conditional_effect_calc_SRT <- function(model){
                                                     "Stim_20vOFF" = S20Hz - SOFF
   )) 
   return(summary(model_effects))
+}
+
+brms_epred_calc_FLT <- function(model, ana){
+  preds <- brms::posterior_epred(model)
+  # load FLT data
+  FLTRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/flanker.csv") %>%
+    mutate(Error = 1 - Correct_Response) %>%
+    mutate(StimCon = as_factor(case_when(
+      Stim_verb == "130Hz" ~ "S130Hz",
+      Stim_verb == "20Hz" ~ "S20Hz",
+      Stim_verb == "OFF" ~ "SOFF"
+    ))) 
+  
+  # filter the data more for the RT analysis
+  if (ana == "RT") {FLTRT %>%
+    filter(Correct_Response == 1,
+           RT <3,
+           RT > 0.2) %>%
+    mutate(RT_ms = RT*1000)}
+  
+  # create a contrast matrix for our comparisons of interest
+  # Contrasts only for the list-wide effect only
+  FLT_Contrast <- hypr(
+    Congruency = (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3,
+    Stim_20v130 = (S20Hz_incongruent + S20Hz_congruent)/2 ~ (S130Hz_incongruent + S130Hz_congruent)/2,
+    Stim_20vOFF = (S20Hz_incongruent + S20Hz_congruent)/2 ~ (SOFF_incongruent + SOFF_congruent)/2,
+    Stroop_20v130 = (S20Hz_incongruent - S20Hz_congruent) ~ (S130Hz_incongruent - S130Hz_congruent),
+    Stroop_20vOFF = (S20Hz_incongruent - S20Hz_congruent) ~ (SOFF_incongruent - SOFF_congruent),
+    levels = c("S130Hz_incongruent", "S130Hz_congruent", "SOFF_congruent", 
+               "SOFF_incongruent", "S20Hz_incongruent", "S20Hz_congruent")
+  )
+  
+  # create a variable for the contrasts
+  FLTRT <- FLTRT %>%
+    mutate(Contrast_F = as_factor(case_when(
+      Stim_verb == "130Hz" & Congruency == "congruent" ~ "S130Hz_congruent",
+      Stim_verb == "130Hz" & Congruency == "incongruent" ~ "S130Hz_incongruent",
+      Stim_verb == "20Hz" & Congruency == "congruent" ~ "S20Hz_congruent",
+      Stim_verb == "20Hz" & Congruency == "incongruent" ~ "S20Hz_incongruent",
+      Stim_verb == "OFF" & Congruency == "congruent" ~ "SOFF_congruent",
+      Stim_verb == "OFF" & Congruency == "incongruent" ~ "SOFF_incongruent",
+    )))
+  
+  # assign the generated contrast matrix to the List Wide Factor
+  contrasts(FLTRT$Contrast_F) <- contr.hypothesis(FLT_Contrast)
+  
+  # calculate contrasts
+  S130Hz_congruent <- rowMeans(preds[,FLTRT$Contrast_F == "S130Hz_congruent"])
+  S130Hz_incongruent <- rowMeans(preds[,FLTRT$Contrast_F == "S130Hz_incongruent"])
+  S20Hz_congruent <- rowMeans(preds[,FLTRT$Contrast_F == "S20Hz_congruent"])
+  S20Hz_incongruent <- rowMeans(preds[,FLTRT$Contrast_F == "S20Hz_incongruent"])
+  SOFF_congruent <- rowMeans(preds[,FLTRT$Contrast_F == "SOFF_congruent"])
+  SOFF_incongruent <- rowMeans(preds[,FLTRT$Contrast_F == "SOFF_incongruent"])
+  
+  
+  model_effects <- tibble(contrast = c("Congruency", "Stim_20v130", "Stim_20vOFF", "Stroop_20v130", "Stroop_20vOFF"))
+  Congruency <- tidybayes::mean_hdi(((S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3 -
+    (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3))
+  Stim_20v130 <- tidybayes::mean_hdi(((S20Hz_incongruent + S20Hz_congruent)/2 - (S130Hz_incongruent + S130Hz_congruent)/2))
+  Stim_20vOFF <- tidybayes::mean_hdi(((S20Hz_incongruent + S20Hz_congruent)/2 - (SOFF_incongruent + SOFF_congruent)/2))
+  Stroop_20v130 <- tidybayes::mean_hdi(((S20Hz_incongruent - S20Hz_congruent) - (S130Hz_incongruent - S130Hz_congruent)))
+  Stroop_20vOFF <- tidybayes::mean_hdi(((S20Hz_incongruent - S20Hz_congruent) - (SOFF_incongruent - SOFF_congruent)))
+  
+  model_effects<- model_effects %>%
+    bind_cols(bind_rows(Congruency, Stim_20v130, Stim_20vOFF, Stroop_20v130, Stroop_20vOFF))
+  
+  return(model_effects)
 }
 
 conditional_effect_calc_FLT <- function(model){
@@ -363,3 +478,4 @@ for (tsk in tasks){
 
 #save data
 write.table(Full_Model_Info , file = "E:/20Hz/Data/Modelle/Full_Results.csv")
+Full_Model_Info <- read.csv(file = "E:/20Hz/Data/Modelle/Full_Results.csv", header = TRUE, sep = "")
