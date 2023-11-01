@@ -13,6 +13,7 @@ import hddm
 from joblib import Parallel, delayed
 from patsy import dmatrix
 import random
+import math
 
 
 def get_choice(row):
@@ -215,6 +216,79 @@ def summary_plot(df_group, df_sim_group=None, quantiles=[0, 0.1, 0.3, 0.5, 0.7, 
 
     return fig
 
+def seaborn_data_plotting(data):
+    sns.set_style("whitegrid")
+    pal = sns.color_palette('Set2')
+    #set figure size
+    sns.set(rc = {'figure.figsize': (10, 6)})
+    #data = pd.DataFrame(df_emp)
+    data.condition.astype('category')
+    #reset index
+    data = data.reset_index()
+    data["error"] = 1 - data["correct"]
+    #set order so the medians match
+    hue_ord = ['130Hz', '20Hz', 'OFF']
+    # set up subplots
+    fig = plt.figure()
+    ax1 = fig.add_subplot(121)
+    # plot RT
+    box_plot = sns.boxplot(data = data[data['condition'] != 'NoGo'],
+                           hue ='condition', y = 'rt', x = 'StimC', 
+                           order=hue_ord, ax = ax1, palette= pal)
+    #sns.despine(offset = 10, trim = True) # make the axis more exiting
+    # median RT added to plot
+    median_RT = data[data['condition'] != 'NoGo'].groupby(['StimC', 'condition'])['rt'].median().round(3)
+    vertical_offset = data[data['condition'] != 'NoGo'].rt.median()* 0.05 # offset from median for display
+    tick_range = [0,0,1,1,2,2] # ticks
+    counter = 0
+    
+    # write median values in graph
+    for xtick in tick_range:
+        if counter%2 ==1:
+            offset = 0.2
+        else: 
+            offset = -0.2
+        
+        box_plot.text(xtick + offset, median_RT[counter] + vertical_offset, median_RT[counter], 
+                      horizontalalignment='center',size='x-small',color='w',weight='bold', bbox=dict(facecolor='#445A64'))
+        counter +=1
+        
+    # plot accuracy values
+    ax2 = fig.add_subplot(122)
+    mean_err = data.groupby(['StimC', 'condition'])['error'].mean().round(3)
+    bar_plot = sns.barplot(data = data, hue = 'condition', y = 'error',  
+                x = 'StimC',  order=hue_ord,ax = ax2, palette= pal)
+    
+    vertical_offset = data.error.mean()* 0.05 # offset from median for display
+    tick_range_err = [0,0,0,1,1,1,2,2,2] # ticks
+    counter = 0
+
+    # write median values in graph
+    for xtick in tick_range_err:
+        if counter%3 ==1:
+            offset = 0
+        elif counter%3 == 2:
+            offset = 0.25
+        else: 
+            offset = -0.25
+        
+        bar_plot.text(xtick + offset, mean_err[counter] + vertical_offset, mean_err[counter], 
+                      horizontalalignment='center',size='x-small',color='w',weight='bold', bbox=dict(facecolor='#445A64'))
+        counter +=1
+    
+    plt.close(2)
+    plt.close(3)
+    plt.tight_layout()
+    
+    
+
+    
+    
+
+    
+    
+    
+
 random.seed(852)
 # settings
 go_nogo = True # should we put all RTs for one choice alternative to NaN (go-no data)?
@@ -223,9 +297,9 @@ GoTrials = 75
 NoGoTrials =25
 
 # parameters:
-params0 = {'cond':'OFF', 'v':.5, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
-params1 = {'cond':'130Hz', 'v':.5, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
-params2 = {'cond':'20Hz', 'v':.5, 'a':1.5, 'zz':0.5,'t':0.3, 'z':.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
+params0 = {'cond':'OFF', 'v':3, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
+params1 = {'cond':'130Hz', 'v':3, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
+params2 = {'cond':'20Hz', 'v':3, 'a':1.5, 'zz':0.5,'t':0.3, 'z':.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
 
 
 # # parameters:
