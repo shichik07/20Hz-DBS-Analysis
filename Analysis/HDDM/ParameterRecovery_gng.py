@@ -32,15 +32,15 @@ def get_choice(row):
             return 0
 
 
-def simulate_data_GnG(a, zz, v, t, z, dc, sv=0, sz=0, st=0, condition = 0, nr_trials1=50, nr_trials2=25, nr_trials3=25):
+def simulate_data_GnG(a, zz, v, t, z, vc, sv=0, sz=0, st=0, condition = 0, nr_trials1=100, nr_trials2=50, nr_trials3=50):
 
     """
     Simulates stim-coded data.
     """
 
-    parameters1 = {'a':a, 'v':v+dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
-    parameters2 = {'a':a + zz, 'v':v+dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
-    parameters3 = {'a':a + zz, 'v':v-dc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
+    parameters1 = {'a':a, 'v':v, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
+    parameters2 = {'a':a + zz, 'v':v, 't':t, 'z':0.5, 'sv':sv, 'sz': sz, 'st': st} # we set the parameter to 0.5 here because we expect go and nogo trials here to be equally likely
+    parameters3 = {'a':a + zz, 'v':v-vc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
     df_sim1, params_sim1 = hddm.generate.gen_rand_data(params=parameters1, size=nr_trials1, subjs=1, subj_noise=0)
     df_sim1['condition'] = "Go"
     df_sim2, params_sim2 = hddm.generate.gen_rand_data(params=parameters2, size=nr_trials2, subjs=1, subj_noise=0)
@@ -49,6 +49,7 @@ def simulate_data_GnG(a, zz, v, t, z, dc, sv=0, sz=0, st=0, condition = 0, nr_tr
     df_sim3['condition'] = "NoGo"
     df_sim = pd.concat((df_sim1, df_sim2, df_sim3))
     df_sim['correct'] = df_sim.apply(get_choice, 1)
+    df_sim['StimC'] = condition
     
     return df_sim
 
@@ -192,7 +193,7 @@ def seaborn_data_plotting_simple(data):
 random.seed(852)
 # settings
 go_nogo = True # should we put all RTs for one choice alternative to NaN (go-no data)?
-n_subjects = 10 #16
+n_subjects = 16 #16
 GoTrials = 150 #75
 NoGoTrials =150 #25
 
@@ -201,9 +202,9 @@ NoGoTrials =150 #25
 #parameters3 = {'a':a + zz, 'v':v+dc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
 
 # parameters:
-params0 = {'cond':'OFF', 'v':1.5, 'a':2.0, 'zz':0,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
-params1 = {'cond':'130Hz', 'v':1.5, 'a':2.0, 'zz':0,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
-params2 = {'cond':'20Hz', 'v':1.5, 'a':2.0, 'zz':0.8,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
+params0 = {'cond':'OFF', 'v':1.3, 'a':2.0, 'zz':0,'t':0.3, 'z':0.6, 'vc':2.1, 'sz':0, 'st':0, 'sv':0}
+params1 = {'cond':'130Hz', 'v':1.3, 'a':2.0, 'zz':0,'t':0.3, 'z':0.6, 'vc':2.1, 'sz':0, 'st':0, 'sv':0}
+params2 = {'cond':'20Hz', 'v':1.3, 'a':2.0, 'zz':0.8,'t':0.3, 'z':0.6, 'vc':2.1, 'sz':0, 'st':0, 'sv':0}
 
 
 # # parameters:
@@ -216,7 +217,7 @@ params2 = {'cond':'20Hz', 'v':1.5, 'a':2.0, 'zz':0.8,'t':0.3, 'z':0.8, 'dc':0, '
 dfs_simple = []
 
 for i in range(n_subjects):
-    df0 = simulate_data_GnG_simple(z=params0['z'], a=params0['a'], v=params0['v'], dc=params0['dc'],
+    df0 = simulate_data_GnG_simple(z=params0['z'], a=params0['a'], v=params0['v'], dc=params0['vc'],
                         t=params0['t'], sv=params0['sv'], st=params0['st'], sz=params0['sz'],
                         condition=params0['cond'], zz = params0['zz'], nr_trials2= GoTrials, nr_trials3= NoGoTrials)
     
@@ -234,13 +235,13 @@ seaborn_data_plotting_simple(df_emp_simple)
 # simulate complex task:
 dfs = []
 for i in range(n_subjects):
-    df0 = simulate_data_GnG(z=params0['z'], a=params0['a'], v=params0['v'], dc=params0['dc'],
+    df0 = simulate_data_GnG(z=params0['z'], a=params0['a'], v=params0['v'], vc=params0['vc'],
                         t=params0['t'], sv=params0['sv'], st=params0['st'], sz=params0['sz'],
                         condition=params0['cond'], zz = params0['zz'])
-    df1 = simulate_data_GnG(z=params1['z'], a=params1['a'], v=params1['v'], dc=params1['dc'],
+    df1 = simulate_data_GnG(z=params1['z'], a=params1['a'], v=params1['v'], vc=params1['vc'],
                         t=params1['t'], sv=params1['sv'], st=params1['st'], sz=params1['sz'],
                         condition=params1['cond'], zz = params1['zz'])
-    df2 = simulate_data_GnG(z=params2['z'], a=params2['a'], v=params2['v'], dc=params2['dc'],
+    df2 = simulate_data_GnG(z=params2['z'], a=params2['a'], v=params2['v'], vc=params2['vc'],
                         t=params2['t'], sv=params2['sv'], st=params2['st'], sz=params2['sz'],
                         condition=params2['cond'], zz = params2['zz'])
     df = pd.concat((df0, df1, df2))
@@ -250,7 +251,7 @@ for i in range(n_subjects):
 # combine in one dataframe:
 df_emp = pd.concat(dfs)
 if go_nogo:
-    df_emp.loc[df_emp["response"]==0, 'rt'] = 0
+    df_emp.loc[df_emp["response"]==0, 'rt'] = -1
     
 # Plot the accuracy data for Go and NoGo responses
 seaborn_data_plotting(df_emp)
@@ -261,45 +262,20 @@ seaborn_data_plotting(df_emp)
     # 1) We need a Link function to implement the starting point bias for Go/NoGo distinction
     # 2) We need a Link function to implement the drift rate bias for the Go/NoGo distinction
     # 3) Worst of all - we need a link function to implement the difference in the decision threshold by Go/NoGo decision and Stimulation condition
-# first create a new column with the Go versus NoGo condition
-df_emp['change_con'] = df_emp["condition"].apply(lambda x: 1 if "NoGo" in x else 0)
 
-# we want another condition for the interaction effect
-# Define the strings to search for in each column
-string1 = '20Hz'
-string2 = 'NoGo'
 
-# Define the function to apply on each row
-def check_strings(row):
-    if string1 in row['StimC'] and string2 in row['condition']:
-        return 1
-    else:
-        return 0
+# get an index for stop or go 
+df_emp['stimulus'] = df_emp["condition"].apply(lambda x: 0 if "NoGo" in x else 1) # column to code Stop and Go trials
 
-# Apply the function to create a new column
-df_emp['thresh'] = df_emp.apply(lambda row: check_strings(row), axis=1)
-
-# okay we need to streamline the size of the dataframe. First we drop all columns that do not matter for the analysis
-df_emp_sub = df_emp.copy().loc[:, ['rt', 'response', 'subj_idx', 'correct', 'stimulus', 'StimC', 'change_con', 'thresh']]
-# change the stimC variable to integers
-# Define the mapping dictionary for recoding
-mapping = {
-    'OFF': 1,
-    '130Hz': 2,
-    '20Hz': 3
-}
  
 # reset index, otherwise the link functions are a MESS
-#df_emp_sub = df_emp_sub.reset_index()
-df_emp_simple2 = df_emp_simple
-df_emp_simple = df_emp_simple.reset_index(drop = True)
-#df_emp_simple['index'] = range(0, len(df_emp_simple))
-mydata = df_emp_simple
+df_emp = df_emp.reset_index(drop = True)
+mydata = df_emp
  
 # first the link function for the starting point bias - which we took from the hddm website
 def z_link_func(x, data=mydata):
     stim = (np.asarray(dmatrix('0 + C(s, [[0], [1]])',
-                              {'s': data.condition.loc[x.index]},return_type='dataframe'))
+                              {'s': data.stimulus.loc[x.index]},return_type='dataframe'))
     )
     # Apply z = (1 - x) to flip them along 0.5
     z_flip = np.subtract(stim, x.to_frame())
@@ -320,9 +296,10 @@ def v_link_func(x, data=mydata):
 # Instead, what we are going to do is create a new variable that contains Go trials (Go) versus NoGo (NoGo + Go) trials
 # and estimate the threshold of the interaction with the normal stimulus function. I do not think the threshold for Go versus NoGo should vary
 # Only by the condition. So lets set this up and see if we can recover our simulated parameter
-v_reg = {'model': 'v ~ 1', 'link_func': v_link_func}
-z_reg = {'model': 'z ~ 1 + StimC', 'link_func': z_link_func}
-a_reg = {'model': "a ~ 1", 'link_func': lambda a: a}
+#v_reg = {'model': 'v ~ 1', 'link_func': v_link_func}
+v_reg = {'model': 'v ~ 1 + C(condition)', 'link_func': lambda a: a}
+z_reg = {'model': 'z ~ 1', 'link_func': z_link_func}
+a_reg = {'model': "a ~ 1 + C(StimC)", 'link_func': lambda a: a}
 
 # from patsy import dmatrices
 # formula = "rt ~ 1 + C(StimC, Treatment('OFF')):C(change_con, Treatment(0))"
@@ -331,10 +308,10 @@ a_reg = {'model': "a ~ 1", 'link_func': lambda a: a}
 # X['change_con'] = df_emp_sub.change_con.copy()
 
 
-reg_model =  [z_reg]
-sim_mod = hddm.HDDMRegressor(df_emp_sub, 
+reg_model =  [z_reg, v_reg, a_reg]
+sim_mod = hddm.HDDMRegressor(df_emp, 
                              reg_model, 
-                             include=['z'])
+                             include=['z' , 'v'])
 
 # sim_mod = hddm.HDDMRegressor(df_emp_sub, 
 #                              {'model': "a ~ 1 + C(StimC, Treatment(1)):C(change_con, Treatment(0))", 'link_func': lambda x: x}, 
@@ -343,7 +320,9 @@ sim_mod = hddm.HDDMRegressor(df_emp_sub,
 sim_mod.find_starting_values()
 #get samples and discard a couple as burn ins
 sim_mod.sample(400, burn = 100, dbname='GoNoGo_threshold_byc_Sim',db='pickle')
-
+# save model
+model = hddm.load('mymodel')
+#check stats
 staty = sim_mod.print_stats()
 
 par_a, par_v, par_z, par_t = sim_mod.nodes_db.loc[["a_Intercept",
