@@ -4,3 +4,13 @@ This is a re-analysis of a behavioral task performance where parameters of deep 
 We use Bayesian mixed effect models with a shifted-log normal likelihood for the reaction time analysis and a Bernoulli likelihood with a logit link function to analyze the error data. In addition, to explore the participants' behavior in the Go-NoGo task further, we use Bayesian hierarchical drift-diffusion models. Mixed effect modeling is performed in R using the brms package, whereas the drift-diffusion modeling is performed in Python using the hddm package.
 
 The subfolder "Analysis" contains the scripts for the described analyses, and the folder "Figures" contains scripts to create the visualizations, mainly performed using ggplot in R.
+
+To use scripts and load model files use package versions contained in the renv file. Bayes_factor calculations may depend on brms version or dependency used to create respective models. To use renv files:
+
+'''
+# Install renv if not already installed
+if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
+
+# Restore the project environment
+renv::restore()
+'''
