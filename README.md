@@ -7,10 +7,10 @@ The subfolder "Analysis" contains the scripts for the described analyses, and th
 
 To use scripts and load model files use package versions contained in the renv file. Bayes_factor calculations may depend on brms version or dependency used to create respective models. To use renv files:
 
-'''
+```
 # Install renv if not already installed
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 
 # Restore the project environment
 renv::restore()
-'''
+```
