@@ -2,3 +2,4 @@ Data/
 renv/
 Output/
 /*.png
+*.Rhistory
