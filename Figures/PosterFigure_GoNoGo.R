@@ -2,7 +2,6 @@ library(haven) # import SPSS files
 library(dplyr)
 library(tidyr)
 library(readr)
-library(tidybayes)
 library(ggtext)
 library(colorspace)
 library(ragg)
@@ -10,6 +9,8 @@ library(ggplot2)
 library(forcats)# so we can simply reorder the variables with fct_inorder
 library(ggsci)
 library(plotrix) # to calculate standard error
+library(ggpubr)
+library(stringr)
 
 pal_npg("nrc")(2)
 hcl_palettes(palette = "reds", plot = TRUE)
@@ -30,7 +31,7 @@ GoNoGo<- read_csv(file = "GoNoGo.csv") %>%
 
 GoNoGo_cleanRT <- GoNoGo %>% filter(Correct_Response == 1,
                                     GoNoGo != "NoGo - Stop",
-                                      RT < 2,
+                                      RT < 3,
                                       RT > 0.2)%>%
   mutate(RT = RT*1000)
 

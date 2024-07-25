@@ -31,27 +31,6 @@ def get_choice(row):
         else:
             return 0
 
-def simulate_data(a, v, t, z, dc, sv=0, sz=0, st=0, condition=0, nr_trials1=100, nr_trials2=50):
-
-    """
-    Simulates stim-coded data.
-    """
-
-    parameters1 = {'a':a, 'v':v+dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
-    parameters2 = {'a':a, 'v':v-dc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
-    df_sim1, params_sim1 = hddm.generate.gen_rand_data(params=parameters1, size=nr_trials1, subjs=1, subj_noise=0)
-    df_sim1['condition'] = 'present'
-    df_sim2, params_sim2 = hddm.generate.gen_rand_data(params=parameters2, size=nr_trials2, subjs=1, subj_noise=0)
-    df_sim2['condition'] = 'absent'
-    df_sim = pd.concat((df_sim1, df_sim2))
-    df_sim['bias_response'] = df_sim.apply(get_choice, 1)
-    df_sim['correct'] = df_sim['response'].astype(int)
-    df_sim['response'] = df_sim['bias_response'].astype(int)
-    df_sim['stimulus'] = np.array((np.array(df_sim['response']==1) & np.array(df_sim['correct']==1)) + (np.array(df_sim['response']==0) & np.array(df_sim['correct']==0)), dtype=int)
-    df_sim['condition'] = condition
-    df_sim = df_sim.drop(columns=['bias_response'])
-
-    return df_sim
 
 def simulate_data_GnG(a, zz, v, t, z, dc, sv=0, sz=0, st=0, condition = 0, nr_trials1=50, nr_trials2=25, nr_trials3=25):
 
@@ -69,152 +48,52 @@ def simulate_data_GnG(a, zz, v, t, z, dc, sv=0, sz=0, st=0, condition = 0, nr_tr
     df_sim3, params_sim3 = hddm.generate.gen_rand_data(params=parameters3, size=nr_trials3, subjs=1, subj_noise=0)
     df_sim3['condition'] = "NoGo"
     df_sim = pd.concat((df_sim1, df_sim2, df_sim3))
-    df_sim['bias_response'] = df_sim.apply(get_choice, 1)
-    df_sim['correct'] = df_sim['response'].astype(int)
-    df_sim['response'] = df_sim['bias_response'].astype(int)
-    df_sim['stimulus'] = np.array((np.array(df_sim['response']==1) & np.array(df_sim['correct']==1)) + (np.array(df_sim['response']==0) & np.array(df_sim['correct']==0)), dtype=int)
-    df_sim['StimC'] = condition
-    df_sim = df_sim.drop(columns=['bias_response'])
-
+    df_sim['correct'] = df_sim.apply(get_choice, 1)
+    
     return df_sim
 
-def fit_subject(data, quantiles):
+def simulate_data_GnG_simple(a, zz, v, t, z, dc, sv, sz, st, condition, nr_trials2, nr_trials3):
 
     """
     Simulates stim-coded data.
     """
 
-    subj_idx = np.unique(data['subj_idx'])
-    m = hddm.HDDMStimCoding(data, stim_col='stimulus', split_param='v', drift_criterion=True, bias=True, p_outlier=0,
-                            depends_on={'v':'condition', 'a':'condition', 't':'condition', 'z':'condition', 'dc':'condition', })
-    m.optimize('gsquare', quantiles=quantiles, n_runs=8)
-    res = pd.concat((pd.DataFrame([m.values], index=[subj_idx]), pd.DataFrame([m.bic_info], index=[subj_idx])), axis=1)
-    return res
+    parameters2 = {'a':a + zz, 'v':v+dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
+    parameters3 = {'a':a + zz, 'v':v-dc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
+    
+    df_sim2, params_sim2 = hddm.generate.gen_rand_data(params=parameters2, size=nr_trials2, subjs=1, subj_noise=0)
+    df_sim2['condition'] = "Go"
+    df_sim3, params_sim3 = hddm.generate.gen_rand_data(params=parameters3, size=nr_trials3, subjs=1, subj_noise=0)
+    df_sim3['condition'] = "NoGo"
+    df_sim = pd.concat((df_sim2, df_sim3))
+    df_sim['correct'] = df_sim.apply(get_choice, 1)
+    #df_sim['correct'] = df_sim['response'].astype(int)
+    #df_sim['response'] = df_sim['bias_response'].astype(int)
+    #df_sim['stimulus'] = np.array((np.array(df_sim['response']==1) & np.array(df_sim['correct']==1)) + (np.array(df_sim['response']==0) & np.array(df_sim['correct']==0)), dtype=int)
+    #df_sim['StimC'] = condition
+    #df_sim = df_sim.drop(columns=['bias_response'])
 
-def summary_plot(df_group, df_sim_group=None, quantiles=[0, 0.1, 0.3, 0.5, 0.7, 0.9,], xlim=None):
+    return df_sim
+
+def simulate_data_GnG_simple2(a, zz, v, t, z, dc, sv, sz, st,nr_trials, nr_subjects):
 
     """
-    Generates a
+    Simulates stim-coded data.
     """
 
-    nr_subjects = len(np.unique(df_group['subj_idx']))
+    
+    # session 2
+    level1b = {'v':v, 'a':a, 't':t,'sv': 0, 'z':z, 'sz': 0, 'st': 0}
+    level2b = {'v':v, 'a':a, 't':t,'sv': 0, 'z':1-z, 'sz': 0, 'st': 0}
+    
+    # simulate data
+    data_b, params_b = hddm.generate.gen_rand_data({'go': level1b,
+                                                    'nogo': level2b,},
+                                                    size=nr_trials,
+                                                    subjs=nr_subjects)
 
-    fig = plt.figure(figsize=(10,nr_subjects*2))
-    plt_nr = 1
-    for s in np.unique(df_group['subj_idx']):
-        df = df_group.copy().loc[(df_group['subj_idx']==s),:]
-        df_sim = df_sim_group.copy().loc[(df_sim_group['subj_idx']==s),:]
-        df['rt_acc'] = df['rt'].copy()
-        df.loc[df['correct']==0, 'rt_acc'] = df.loc[df['correct']==0, 'rt_acc'] * -1
-        df['rt_resp'] = df['rt'].copy()
-        df.loc[df['response']==0, 'rt_resp'] = df.loc[df['response']==0, 'rt_resp'] * -1
-        df_sim['rt_acc'] = df_sim['rt'].copy()
-        df_sim.loc[df_sim['correct']==0, 'rt_acc'] = df_sim.loc[df_sim['correct']==0, 'rt_acc'] * -1
-        df_sim['rt_resp'] = df_sim['rt'].copy()
-        df_sim.loc[df_sim['response']==0, 'rt_resp'] = df_sim.loc[df_sim['response']==0, 'rt_resp'] * -1
-        max_rt = np.percentile(df_sim.loc[~np.isnan(df_sim['rt']), 'rt'], 99)
-        bins = np.linspace(-max_rt,max_rt,30)
-        # rt distributions correct vs error:
-        ax = fig.add_subplot(nr_subjects,4,plt_nr)
-        N, bins, patches = ax.hist(df.loc[:, 'rt_acc'], bins=bins,
-                                   density=True, color='green', alpha=0.5)
+    return data_b
 
-
-        for bin_size, bin, patch in zip(N, bins, patches):
-            if bin < 0:
-                plt.setp(patch, 'facecolor', 'r')
-        if df_sim is not None:
-            ax.hist(df_sim.loc[:, 'rt_acc'], bins=bins, density=True,
-                    histtype='step', color='k', alpha=1, label=None)
-        ax.set_title('P(correct)={}'.format(round(df.loc[:, 'correct'].mean(), 3),))
-        ax.set_xlabel('RT (s)')
-        ax.set_ylabel('Trials (prob. dens.)')
-        plt_nr += 1
-
-        # condition accuracy plots:
-        ax = fig.add_subplot(nr_subjects,4,plt_nr)
-        df.loc[:,'rt_bin'] = pd.qcut(df['rt'], quantiles, labels=False)
-        d = df.groupby(['rt_bin']).mean().reset_index()
-        ax.errorbar(d.loc[:, "rt"], d.loc[:, "correct"], fmt='-o', color='orange', markersize=10)
-        if df_sim is not None:
-            df_sim.loc[:,'rt_bin'] = pd.qcut(df_sim['rt'], quantiles, labels=False)
-            d = df_sim.groupby(['rt_bin']).mean().reset_index()
-            ax.errorbar(d.loc[:, "rt"], d.loc[:, "correct"], fmt='x', color='k', markersize=6)
-        if xlim:
-            ax.set_xlim(xlim)
-        ax.set_ylim(0, 1.25)
-        ax.set_title('Conditional accuracy')
-        ax.set_xlabel('RT (quantiles)')
-        ax.set_ylabel('P(correct)')
-        plt_nr += 1
-
-        # rt distributions response 1 vs 0:
-        ax = fig.add_subplot(nr_subjects,4,plt_nr)
-        if np.isnan(df['rt']).sum() > 0:
-            # some initial computations
-            bar_width = 1
-            fraction_yes = df['response'].mean()
-            fraction_yes_sim = df_sim['response'].mean()
-            no_height = (1 - fraction_yes) / bar_width
-            no_height_sim = (1 - fraction_yes_sim) / bar_width
-
-            hist, edges = np.histogram(df.loc[:, 'rt_resp'], bins=bins, density=True,)
-            hist = hist * fraction_yes
-            hist_sim, edges_sim = np.histogram(df_sim.loc[:, 'rt_resp'], bins=bins, density=True,)
-            hist_sim = hist_sim * fraction_yes_sim
-
-            # Add histogram from go choices
-            # ground truth
-            ax.bar(edges[:-1], hist, width=np.diff(edges)[0], align='edge',
-                   color='magenta', alpha=0.5, linewidth=0,)
-            # simulations
-            ax.step(edges_sim[:-1] + np.diff(edges)[0], hist_sim, color='black', lw=1)
-
-            # Add bar for the no-go choices (on the negative rt scale)
-            # This just illustrates the probability of no-go choices
-
-            # ground truth
-            ax.bar(x=-1.5, height=no_height, width=bar_width, alpha=0.5, color='cyan', align='center')
-
-            # simulations
-            ax.hlines(y=no_height_sim, xmin=-2, xmax=-1, lw=0.5, colors='black',)
-            ax.vlines(x=-2, ymin=0, ymax=no_height_sim, lw=0.5, colors='black')
-            ax.vlines(x=-1, ymin=0, ymax=no_height_sim, lw=0.5, colors='black')
-        else:
-            N, bins, patches = ax.hist(df.loc[:, 'rt_resp'], bins=bins,
-                                   density=True, color='magenta', alpha=0.5)
-            for bin_size, bin, patch in zip(N, bins, patches):
-                if bin < 0:
-                    plt.setp(patch, 'facecolor', 'cyan')
-            ax.hist(df_sim.loc[:, 'rt_resp'], bins=bins, density=True,
-                    histtype='step', color='k', alpha=1, label=None)
-
-        ax.set_title('P(bias)={}'.format(round(df.loc[:, 'response'].mean(), 3),))
-        ax.set_xlabel('RT (s)')
-        ax.set_ylabel('Trials (prob. dens.)')
-        plt_nr += 1
-
-        # condition response plots:
-        ax = fig.add_subplot(nr_subjects,4,plt_nr)
-        df.loc[:,'rt_bin'] = pd.qcut(df['rt'], quantiles, labels=False)
-        d = df.groupby(['rt_bin']).mean().reset_index()
-        ax.errorbar(d.loc[:, "rt"], d.loc[:, "response"], fmt='-o', color='orange', markersize=10)
-        if df_sim is not None:
-            df_sim.loc[:,'rt_bin'] = pd.qcut(df_sim['rt'], quantiles, labels=False)
-            d = df_sim.groupby(['rt_bin']).mean().reset_index()
-            ax.errorbar(d.loc[:, "rt"], d.loc[:, "response"], fmt='x', color='k', markersize=6)
-        if xlim:
-            ax.set_xlim(xlim)
-        ax.set_ylim(0,1.25)
-        ax.set_title('Conditional response')
-        ax.set_xlabel('RT (quantiles)')
-        ax.set_ylabel('P(bias)')
-        plt_nr += 1
-
-    sns.despine(offset=3, trim=True)
-    plt.tight_layout()
-
-    return fig
 
 def seaborn_data_plotting(data):
     sns.set_style("whitegrid")
@@ -280,26 +159,51 @@ def seaborn_data_plotting(data):
     plt.close(3)
     plt.tight_layout()
     
+def seaborn_data_plotting_simple(data):
+    sns.set_style("whitegrid")
+    pal = sns.color_palette('Set2')
+    #set figure size
+    sns.set(rc = {'figure.figsize': (10, 6)})
+    #data = pd.DataFrame(df_emp_simple)
+    data.condition.astype('category')
+    #reset index
+    data = data.reset_index()
+    data["error"] = 1 - data["correct"]
+    # set up subplots
+    fig = plt.figure()
+    ax1 = fig.add_subplot(121)
+    # plot RT
+    box_plot = sns.boxplot(data = data[data['condition'] != 'NoGo'],
+                           hue ='condition', y = 'rt', 
+                           ax = ax1, palette= pal)
+        
+    # plot accuracy values
+    ax2 = fig.add_subplot(122)
+    bar_plot = sns.barplot(data = data, x = 'condition', y = 'error',  
+            ax = ax2, palette= pal)
     
-
-    
-    
-
-    
+    plt.close(2)
+    plt.close(3)
+    plt.tight_layout()
+        
     
     
 
 random.seed(852)
 # settings
 go_nogo = True # should we put all RTs for one choice alternative to NaN (go-no data)?
-n_subjects = 16
-GoTrials = 75
-NoGoTrials =25
+n_subjects = 10 #16
+GoTrials = 150 #75
+NoGoTrials =150 #25
+
+#parameters1 = {'a':a, 'v':v-dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
+#parameters2 = {'a':a + zz, 'v':v-dc, 't':t, 'z':z, 'sv':sv, 'sz': sz, 'st': st}
+#parameters3 = {'a':a + zz, 'v':v+dc, 't':t, 'z':1-z, 'sv':sv, 'sz': sz, 'st': st}
 
 # parameters:
-params0 = {'cond':'OFF', 'v':3, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
-params1 = {'cond':'130Hz', 'v':3, 'a':1.5, 'zz':0,'t':0.3, 'z':0.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
-params2 = {'cond':'20Hz', 'v':3, 'a':1.5, 'zz':0.5,'t':0.3, 'z':.7, 'dc':-0.2, 'sz':0, 'st':0, 'sv':0}
+params0 = {'cond':'OFF', 'v':1.5, 'a':2.0, 'zz':0,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
+params1 = {'cond':'130Hz', 'v':1.5, 'a':2.0, 'zz':0,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
+params2 = {'cond':'20Hz', 'v':1.5, 'a':2.0, 'zz':0.8,'t':0.3, 'z':0.8, 'dc':0, 'sz':0, 'st':0, 'sv':0}
 
 
 # # parameters:
@@ -308,7 +212,26 @@ params2 = {'cond':'20Hz', 'v':3, 'a':1.5, 'zz':0.5,'t':0.3, 'z':.7, 'dc':-0.2, '
 # params2 = {'cond':'20Hz', 'v':.5, 'a':1.5, 'zz':0,'t':0.3, 'z':.7, 'dc':0, 'sz':0, 'st':0, 'sv':0}
 
 
-# simulate:
+# simulate simple task:
+dfs_simple = []
+
+for i in range(n_subjects):
+    df0 = simulate_data_GnG_simple(z=params0['z'], a=params0['a'], v=params0['v'], dc=params0['dc'],
+                        t=params0['t'], sv=params0['sv'], st=params0['st'], sz=params0['sz'],
+                        condition=params0['cond'], zz = params0['zz'], nr_trials2= GoTrials, nr_trials3= NoGoTrials)
+    
+    df0['subj_idx'] = i
+    dfs_simple.append(df0)
+
+
+# combine in one dataframe:
+df_emp_simple = pd.concat(dfs_simple)
+if go_nogo:
+    df_emp_simple.loc[df_emp_simple["response"]==0, 'rt'] = -1    
+
+seaborn_data_plotting_simple(df_emp_simple)
+
+# simulate complex task:
 dfs = []
 for i in range(n_subjects):
     df0 = simulate_data_GnG(z=params0['z'], a=params0['a'], v=params0['v'], dc=params0['dc'],
@@ -330,68 +253,7 @@ if go_nogo:
     df_emp.loc[df_emp["response"]==0, 'rt'] = 0
     
 # Plot the accuracy data for Go and NoGo responses
-
-df = df_emp.copy()
-# only plot correctly answered trials
-fig = plt.figure(figsize=(20, 20))
-# rt distributions correct vs error: df = df_group.copy().loc[(df_group['subj_idx']==s),:]
-df['rt_acc'] = df['rt'].copy()
-df.loc[df['correct']==0, 'rt_acc'] = df.loc[df['correct']==0, 'rt_acc'] * -1
-df['rt_resp'] = df['rt'].copy()
-df.loc[df['response']==0, 'rt_resp'] = df.loc[df['response']==0, 'rt_resp'] * -1
-max_rt = np.percentile(df.loc[~np.isnan(df['rt']), 'rt'], 99)
-bins = np.linspace(-max_rt,max_rt,30)
-# rt distributions correct vs error:
-ax = fig.add_subplot(5,6,1)
-N, bins, patches = ax.hist(df.loc[:, 'rt_acc'], bins=bins,
-                   density=True, color='green', alpha=0.5)
-
-
-for bin_size, bin, patch in zip(N, bins, patches):
-     if bin < 0:
-         plt.setp(patch, 'facecolor', 'r')
-
-ax.set_title('P(correct)={}'.format(round(df.loc[:, 'correct'].mean(), 3),))
-ax.set_xlabel('RT (s)')
-ax.set_ylabel('Trials (prob. dens.)')
-
-# condition accuracy plots:
-quantiles=[0, 0.1, 0.3, 0.5, 0.7, 0.9,]
-ax = fig.add_subplot(5,5,2)
-df.loc[:,'rt_bin'] = pd.qcut(df['rt'], quantiles, labels=False)
-d = df.groupby(['rt_bin']).mean().reset_index()
-ax.errorbar(d.loc[:, "rt"], d.loc[:, "correct"], fmt='-o', color='orange', markersize=10)
-ax.set_ylim(0, 1.25)
-ax.set_title('Conditional accuracy')
-ax.set_xlabel('RT (quantiles)')
-ax.set_ylabel('P(correct)')
-
-# add accuracy by Go and NoGo responses
-# ax = fig.add_subplot(5,5,3)
-# d2 = df.copy()
-# d2['Go'] =d2['condition'].apply(lambda x: 1 if 'NoGo' in x else 0)
-# d2 = d2.groupby(['condition']).mean().reset_index()
-
-
-colors = ['green', 'blue', 'red']
-# bars = ax.bar(d2.loc[:, 'condition'], d2.loc[:, 'correct'], alpha=0.5)
-
-# for bar, color in zip(bars, colors):
-#     bar.set_color(color)
-
-# ax.set_title('Accuracy by Stimulus')
-# ax.set_xlabel('Response')
-# ax.set_ylabel('P(correct)')
-
-# add accuracy by Go and NoGo and NoGo-Go responses
-ax = fig.add_subplot(5,5,3)
-d3 = df.copy()
-d3 = d3.groupby(['StimC','condition']).mean().reset_index()
-sns.barplot(data = d3, x = "StimC", y = "correct", hue = "condition", palette = colors, alpha = 0.5 )
-plt.legend([], [], frameon=False)
-ax = fig.add_subplot(5,5,4)
-sns.barplot(data = d3, x = "StimC", y = "rt", hue = "condition", palette = colors, alpha = 0.5 )
-plt.legend([], [], frameon=False)
+seaborn_data_plotting(df_emp)
 
 # next let us fit the model, see if we can recover the parameters
 
@@ -428,13 +290,16 @@ mapping = {
 }
  
 # reset index, otherwise the link functions are a MESS
-df_emp_sub = df_emp_sub.reset_index()
-
+#df_emp_sub = df_emp_sub.reset_index()
+df_emp_simple2 = df_emp_simple
+df_emp_simple = df_emp_simple.reset_index(drop = True)
+#df_emp_simple['index'] = range(0, len(df_emp_simple))
+mydata = df_emp_simple
  
 # first the link function for the starting point bias - which we took from the hddm website
-def z_link_func(x, data=df_emp_sub):
+def z_link_func(x, data=mydata):
     stim = (np.asarray(dmatrix('0 + C(s, [[0], [1]])',
-                              {'s': data.stimulus.loc[x.index]},return_type='dataframe'))
+                              {'s': data.condition.loc[x.index]},return_type='dataframe'))
     )
     # Apply z = (1 - x) to flip them along 0.5
     z_flip = np.subtract(stim, x.to_frame())
@@ -442,21 +307,22 @@ def z_link_func(x, data=df_emp_sub):
     # so invert them back
     z_flip[stim == 0] *= -1
     return z_flip
-    
+
 # Second the Link function for the drift rate bias - which should be the easiest
 
-def v_link_func(x, data=df_emp_sub):
+def v_link_func(x, data=mydata):
     stim = (np.asarray(dmatrix('0 + C(s,[[1],[-1]])', {'s':data.stimulus.loc[x.index]})))
     return x * stim
+
+
 
 # Okay so it might be possible that we do not need a separate link function for the decision threshold
 # Instead, what we are going to do is create a new variable that contains Go trials (Go) versus NoGo (NoGo + Go) trials
 # and estimate the threshold of the interaction with the normal stimulus function. I do not think the threshold for Go versus NoGo should vary
 # Only by the condition. So lets set this up and see if we can recover our simulated parameter
-v_reg = {'model': 'v ~ 1 + C(StimC)', 'link_func': v_link_func}
-z_reg = {'model': 'z ~ 1 + C(StimC)', 'link_func': z_link_func}
-
-a_reg = {'model': "a ~ 1 + C(StimC, Treatment(1)):C(change_con, Treatment(0))", 'link_func': lambda x: x}
+v_reg = {'model': 'v ~ 1', 'link_func': v_link_func}
+z_reg = {'model': 'z ~ 1 + StimC', 'link_func': z_link_func}
+a_reg = {'model': "a ~ 1", 'link_func': lambda a: a}
 
 # from patsy import dmatrices
 # formula = "rt ~ 1 + C(StimC, Treatment('OFF')):C(change_con, Treatment(0))"
@@ -465,82 +331,105 @@ a_reg = {'model': "a ~ 1 + C(StimC, Treatment(1)):C(change_con, Treatment(0))", 
 # X['change_con'] = df_emp_sub.change_con.copy()
 
 
-reg_model =  [z_reg, a_reg]
+reg_model =  [z_reg]
 sim_mod = hddm.HDDMRegressor(df_emp_sub, 
                              reg_model, 
-                             include=['v', 'a', 'z', 't'])
+                             include=['z'])
 
-sim_mod = hddm.HDDMRegressor(df_emp_sub, 
-                             {'model': "a ~ 1 + C(StimC, Treatment(1)):C(change_con, Treatment(0))", 'link_func': lambda x: x}, 
-                             include=['v', 'a', 'z', 't'])
+# sim_mod = hddm.HDDMRegressor(df_emp_sub, 
+#                              {'model': "a ~ 1 + C(StimC, Treatment(1)):C(change_con, Treatment(0))", 'link_func': lambda x: x}, 
+#                              include=['v', 'a', 'z', 't'])
 # find a good starting value
 sim_mod.find_starting_values()
 #get samples and discard a couple as burn ins
-sim_mod.sample(2000, burn = 200, dbname='GoNoGo_threshold_byc_Sim',db='pickle')
+sim_mod.sample(400, burn = 100, dbname='GoNoGo_threshold_byc_Sim',db='pickle')
 
 staty = sim_mod.print_stats()
 
-Intercept_a20Hz, NoGo_change, Hz130Go, OFFGo, Hz130NoGo, OFFNoGO = sim_mod.nodes_db.loc[["a_Intercept",
-                                            "a_C(change_con, Treatment(0))[T.1]", 
-                                  "a_C(StimC, Treatment(1))[T.130Hz]:C(change_con, Treatment(0))[0]", 
-                                  "a_C(StimC, Treatment(1))[T.OFF]:C(change_con, Treatment(0))[0]",
-                                  "a_C(StimC, Treatment(1))[T.130Hz]:C(change_con, Treatment(0))[1]",
-                                  "a_C(StimC, Treatment(1))[T.OFF]:C(change_con, Treatment(0))[1]"
+par_a, par_v, par_z, par_t = sim_mod.nodes_db.loc[["a_Intercept",
+                                            "v", 
+                                  "z_Intercept", 
+                                  "t"
                                   ], 
                                            'node']
 
-# Next we construct the threshold off these parameters for each condition by stimulation
-hz20NoGo = Intercept_a20Hz.trace() + NoGo_change.trace()
-hz20Go = Intercept_a20Hz.trace() 
-hz130NoGo = Intercept_a20Hz.trace() + NoGo_change.trace() + Hz130NoGo.trace()
-hz130Go = Intercept_a20Hz.trace() + Hz130Go.trace()
-OffNoGo = Intercept_a20Hz.trace() + NoGo_change.trace() + OFFNoGO.trace()
-Off20Go = Intercept_a20Hz.trace() + OFFGo.trace()
+mean_v = par_v.trace().mean()
+mean_t = par_t.trace().mean()
+mean_a = par_a.trace().mean()
+mean_z = par_z.trace().mean()
+
+
+# simulate and plot the data to see if recovery worked
+dfs_simple_rec = []
+for i in range(n_subjects):
+    df0 = simulate_data_GnG_simple(z=mean_z, a=mean_a, v=mean_v, dc=0,
+                        t=mean_t, sv=0, st=0, sz=0,
+                        condition=params0['cond'], zz = 0,
+                        nr_trials2= GoTrials, nr_trials3= NoGoTrials)
+    
+    df0['subj_idx'] = i
+    dfs_simple_rec.append(df0)
+
+
+# combine in one dataframe:
+df_emp_simple_rec = pd.concat(dfs_simple_rec)
+if go_nogo:
+    df_emp_simple_rec.loc[df_emp_simple_rec["response"]==0, 'rt'] = 0    
+
+seaborn_data_plotting_simple(df_emp_simple_rec)
+
+# Intercept_a20Hz, NoGo_change, Hz130Go, OFFGo, Hz130NoGo, OFFNoGO = sim_mod.nodes_db.loc[["a_Intercept",
+#                                             "a_C(change_con, Treatment(0))[T.1]", 
+#                                   "a_C(StimC, Treatment(1))[T.130Hz]:C(change_con, Treatment(0))[0]", 
+#                                   "a_C(StimC, Treatment(1))[T.OFF]:C(change_con, Treatment(0))[0]",
+#                                   "a_C(StimC, Treatment(1))[T.130Hz]:C(change_con, Treatment(0))[1]",
+#                                   "a_C(StimC, Treatment(1))[T.OFF]:C(change_con, Treatment(0))[1]"
+#                                   ], 
+#                                            'node']
+
+# # Next we construct the threshold off these parameters for each condition by stimulation
+# hz20NoGo = Intercept_a20Hz.trace() + NoGo_change.trace()
+# hz20Go = Intercept_a20Hz.trace() 
+# hz130NoGo = Intercept_a20Hz.trace() + NoGo_change.trace() + Hz130NoGo.trace()
+# hz130Go = Intercept_a20Hz.trace() + Hz130Go.trace()
+# OffNoGo = Intercept_a20Hz.trace() + NoGo_change.trace() + OFFNoGO.trace()
+# Off20Go = Intercept_a20Hz.trace() + OFFGo.trace()
 
                                 
-# Plot and Store Distributions
-distributions = [hz20NoGo, hz20Go, hz130NoGo,
-                 hz130Go, OffNoGo,  Off20Go]
+# # Plot and Store Distributions
+# distributions = [hz20NoGo, hz20Go, hz130NoGo,
+#                  hz130Go, OffNoGo,  Off20Go]
 
-# Plot densities using seaborn
-sns.set(style="whitegrid")
-for distribution in distributions:
-    sns.kdeplot(distribution, shade=True)
+# # Plot densities using seaborn
+# sns.set(style="whitegrid")
+# for distribution in distributions:
+#     sns.kdeplot(distribution, shade=True)
 
-plt.xlabel('decision threshold')
-plt.ylabel('Posterior probability')
-plt.title('Group mean posteriors of within-subject threshold effect Cued')
-plt.legend(['20Hz Change', '20Hz Go', '130Hz Change', "130Hz Go", "Off change", "Off Go"], 
-           loc='center left', bbox_to_anchor=(1, 0.5))
-plt.savefig('hddm_threshold_GoNoGO_Cued.pdf')
+# plt.xlabel('decision threshold')
+# plt.ylabel('Posterior probability')
+# plt.title('Group mean posteriors of within-subject threshold effect Cued')
+# plt.legend(['20Hz Change', '20Hz Go', '130Hz Change', "130Hz Go", "Off change", "Off Go"], 
+#            loc='center left', bbox_to_anchor=(1, 0.5))
+# plt.savefig('hddm_threshold_GoNoGO_Cued.pdf')
 
-## This part needs to be rewritten
+# ## This part needs to be rewritten
 
-print("P(20Hz > 130Hz Cued) = ", ((Hz20.trace() < Hz130.trace())).mean())
-print("P(20Hz > OFF Cued) = ", ((Hz20.trace() <  OFF.trace())).mean())
-print("P(OFF > 130Hz Cued) = ", ((OFF.trace() <  Hz130.trace())).mean())
-
-
-Hz1301, Hz201, OFF1 = md_srt_stim.nodes_db.loc[["a_C(Stim_verb, Treatment('OFF'))[130Hz]:C(change_con, Treatment(0))[0]", 
-                                  "a_C(Stim_verb, Treatment('OFF'))[20Hz]:C(change_con, Treatment(0))[0]", 
-                                  "a_C(Stim_verb, Treatment('OFF'))[OFF]:C(change_con, Treatment(0))[0]"], 'node']
-hddm.analyze.plot_posterior_nodes([Hz1301, Hz201, OFF1])
-plt.xlabel('decision threshold')
-plt.ylabel('Posterior probability')
-plt.title('Group mean posteriors of within-subject threshold effect Not Cued')
-plt.legend(['130Hz', '20Hz', 'OFF'], 
-           loc='center left', bbox_to_anchor=(1, 0.5))
-plt.savefig('hddm_threshold_GoNoGO_NoNCued.pdf')
-
-print("P(20Hz > 130Hz Non-Cued) = ", ((Hz201.trace() < Hz1301.trace())).mean())
-print("P(20Hz > OFF Non-Cued) = ", ((Hz201.trace() <  OFF1.trace())).mean())
-print("P(OFF > 130Hz Non-Cued) = ", ((OFF1.trace() <  Hz1301.trace())).mean())
+# print("P(20Hz > 130Hz Cued) = ", ((Hz20.trace() < Hz130.trace())).mean())
+# print("P(20Hz > OFF Cued) = ", ((Hz20.trace() <  OFF.trace())).mean())
+# print("P(OFF > 130Hz Cued) = ", ((OFF.trace() <  Hz130.trace())).mean())
 
 
-ad = Hz20.trace()
-ac = OFF.trace()
-plt.hist(ad, density=True, bins = 90)
-plt.hist(ac, density=True, bins = 90)
+# Hz1301, Hz201, OFF1 = md_srt_stim.nodes_db.loc[["a_C(Stim_verb, Treatment('OFF'))[130Hz]:C(change_con, Treatment(0))[0]", 
+#                                   "a_C(Stim_verb, Treatment('OFF'))[20Hz]:C(change_con, Treatment(0))[0]", 
+#                                   "a_C(Stim_verb, Treatment('OFF'))[OFF]:C(change_con, Treatment(0))[0]"], 'node']
+# hddm.analyze.plot_posterior_nodes([Hz1301, Hz201, OFF1])
+# plt.xlabel('decision threshold')
+# plt.ylabel('Posterior probability')
+# plt.title('Group mean posteriors of within-subject threshold effect Not Cued')
+# plt.legend(['130Hz', '20Hz', 'OFF'], 
+#            loc='center left', bbox_to_anchor=(1, 0.5))
+# plt.savefig('hddm_threshold_GoNoGO_NoNCued.pdf')
 
-ab = Hz20.trace() - OFF.trace()
-plt.hist(ab, density=True, bins = 90)
+# print("P(20Hz > 130Hz Non-Cued) = ", ((Hz201.trace() < Hz1301.trace())).mean())
+# print("P(20Hz > OFF Non-Cued) = ", ((Hz201.trace() <  OFF1.trace())).mean())
+# print("P(OFF > 130Hz Non-Cued) = ", ((OFF1.trace() <  Hz1301.trace())).mean())

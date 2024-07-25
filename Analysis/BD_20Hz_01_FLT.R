@@ -17,7 +17,8 @@ library(hypr)
 library(tidybayes)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
+wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
+setwd(wd)
 
 # load data
 FLTRT<- read_csv(file = "flanker.csv") %>%
@@ -107,8 +108,8 @@ fit_shifted_log_FLT <- brm(formula = m1_FLT,
                            chains =4
 )
 
-save(fit_shifted_log_FLT, file = "E:/20Hz/Data/Modelle/shifted_log_FLT.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_FLT.rda")
+save(fit_shifted_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
 
 # posteriro predictive checks
 pp_check(fit_shifted_log_FLT, ndraws = 11, type = "hist")
@@ -186,8 +187,8 @@ fit_log_FLT <- brm(formula = m1_FLT_log,
                       save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                       chains =4)
 
-save(fit_log_FLT, file = "E:/20Hz/Data/Modelle/log_reg_FLT.rda")
-load(file = "E:/20Hz/Data/Modelle/log_reg_FLT.rda")
+save(fit_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
 
 
 # posteriro predictive checks

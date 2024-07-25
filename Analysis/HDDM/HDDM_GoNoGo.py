@@ -42,6 +42,7 @@ md_srt_stim.find_starting_values()
 md_srt_stim.sample(10000, burn = 2000, )
 md_srt_stim.save("GoNoGo_threshold_byc")
 
+
 stats = md_srt_stim.gen_stats()
 summary_Cued = stats[stats.index.isin(["a_C(Stim_verb, Treatment('OFF'))[130Hz]:C(change_con, Treatment(0))[1]", 
                                   "a_C(Stim_verb, Treatment('OFF'))[20Hz]:C(change_con, Treatment(0))[1]", 

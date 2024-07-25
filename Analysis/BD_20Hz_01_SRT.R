@@ -14,12 +14,13 @@ library(tidyr)
 library(readr)
 library(brms)
 library(hypr)
-library(tiybayes)
+library(tidybayes)
 library(bayestestR)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
-
+#setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
+wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
+setwd(wd)
 # load data
 SimpleRT<- read_csv(file = "SimpleRT.csv") %>%
   mutate(Error = 1 - Correct_Response) %>%
@@ -87,8 +88,9 @@ fit_shifted_log_SRT <- brm(formula = m1_SRT,
                   chains =4
 )
 
-save(fit_shifted_log_SRT, file = "E:/20Hz/Data/Modelle/shifted_log_SRT.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_SRT.rda")
+save(fit_shifted_log_SRT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_SRT.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_SRT.rda")
+
 
 # posteriro predictive checks
 pp_check(fit_shifted_log_SRT, ndraws = 11, type = "hist")
@@ -148,8 +150,8 @@ fit_logReg_SRT <- brm(formula = m1_SRT_log,
                                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                                   chains =4)
 
-save(fit_logReg_SRT, file = "E:/20Hz/Data/Modelle/log_reg_SRT.rda")
-load(file = "E:/20Hz/Data/Modelle/log_reg_SRT.rda")
+save(fit_logReg_SRT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_SRT.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_SRT.rda")
 # posteriro predictive checks
 pp_check(fit_logReg_SRT, ndraws = 11, type = "hist")
 # Looks good for this model

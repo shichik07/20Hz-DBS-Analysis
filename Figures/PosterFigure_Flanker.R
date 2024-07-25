@@ -2,7 +2,7 @@ library(haven) # import SPSS files
 library(dplyr)
 library(tidyr)
 library(readr)
-library(tiybayes)
+#(tidybayes)
 library(ggtext)
 library(colorspace)
 library(ragg)
@@ -10,10 +10,12 @@ library(ggplot2)
 library(forcats)# so we can simply reorder the variables with fct_inorder
 library(ggsci)
 library(plotrix) # to calculate standard error
+library(ggpubr)
+library(stringr)
 
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz/Data/Extracted')
+setwd('C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz/Data/Extracted')
 
 # load data
 Flanker<- read_csv(file = "Flanker.csv") %>%

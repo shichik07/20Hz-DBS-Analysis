@@ -18,7 +18,8 @@ library(tidybayes)
 library(emmeans)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
+wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
+setwd(wd)
 
 # load data
 GoNoGo<- read_csv(file = "GoNoGo.csv") %>%
@@ -100,8 +101,8 @@ fit_shifted_log_GNG <- brm(formula = m1_GoNoGo_shift,
                                chains =4
 )
 
-save(fit_shifted_log_GNG, file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
-load(file = "E:/20Hz/Data/Modelle/shifted_log_GNG.rda")
+save(fit_shifted_log_GNG, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_GNG.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_GNG.rda")
 
 # Perform posterior predictive checks 
 
@@ -161,18 +162,18 @@ test <- contrast(emm_GNG_RT, method = list("S130Hz_NoGo_Go - S130Hz_Go" = S130Hz
 ## Next, let us look at the accuracy data
 
 
-prior_weakly_informed_logreg2<- c(
-  prior(normal(-2, 1), class = Intercept),
-  prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMGo), 
-  prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMStop),
-  prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz), 
-  prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz:GoNoGoNoGoMGo),
-  prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz:GoNoGoNoGoMStop),
-  prior(normal(0,  1.5), class = b, coef = Stim_verbOFF), 
-  prior(normal(0,  1.5), class = b, coef = Stim_verbOFF:GoNoGoNoGoMGo),
-  prior(normal(0,  1.5), class = b, coef = Stim_verbOFF:GoNoGoNoGoMStop),
-  prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
-)
+# prior_weakly_informed_logreg2<- c(
+#   prior(normal(-2, 1), class = Intercept),
+#   prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMGo), 
+#   prior(normal(0,  1.5), class = b, coef = GoNoGoNoGoMStop),
+#   prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz), 
+#   prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz:GoNoGoNoGoMGo),
+#   prior(normal(0,  1.5), class = b, coef = Stim_verb20Hz:GoNoGoNoGoMStop),
+#   prior(normal(0,  1.5), class = b, coef = Stim_verbOFF), 
+#   prior(normal(0,  1.5), class = b, coef = Stim_verbOFF:GoNoGoNoGoMGo),
+#   prior(normal(0,  1.5), class = b, coef = Stim_verbOFF:GoNoGoNoGoMStop),
+#   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
+# )
 
 
 #Third Analysis - Here I formulate the contrasts which we are actually interested in - just 20Hz vs other for all response options
@@ -198,7 +199,7 @@ contrasts(GoNoGo$Contrast_F)
 
 # brmsformula object Item Specific
 m1_GoNoGo_log <- bf(Error ~ 1  + Contrast_F + (1|Part_nr)) 
-m1_GoNoGo_log <- bf(Error ~ 1  + Stim_verb * GoNoGo + (1|Part_nr)) 
+#m1_GoNoGo_log <- bf(Error ~ 1  + Stim_verb * GoNoGo + (1|Part_nr)) 
 
 #get_prior(formula =  m1_GoNoGo_log, data = GoNoGo, family = bernoulli(link = logit))
 
@@ -218,19 +219,7 @@ prior_weakly_informed_logreg2<- c(
 
 
 # we should consider varying non-decision times between the groups
-fit_log_flanker2 <- brm(formula = m1_GoNoGo_log,
-                       family = bernoulli(link = logit),
-                       data = GoNoGo,
-                       prior = prior_weakly_informed_logreg2,
-                       warmup = 2000,
-                       iter = 12000,# 20000 is the limit necessary for bridge sampling
-                       cores = 4, seed = 423,
-                       save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
-                       chains =4)
-
-save(fit_log_flanker2, file = "E:/20Hz/Data/Modelle/log_reg_GNG.rda")
-load(file = "E:/20Hz/Data/Modelle/log_reg_GNG.rda")
-
+ 
 # posteriro predictive checks
 pp_check(fit_log_flanker2, ndraws = 11, type = "hist")
 # Looks good for this model
