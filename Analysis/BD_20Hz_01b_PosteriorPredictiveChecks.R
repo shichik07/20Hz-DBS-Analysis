@@ -269,7 +269,7 @@ RT_data <- FLTRT %>%
   filter(Correct_Response == 1,
          RT <3,
          RT > 0.2) %>%
-  mutate(RT_ms = RT*1000)
+  mutate(RT_ms = RT*1000) 
 
 # load the model
 load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
@@ -280,44 +280,50 @@ RT_FLT_pred <- brms::posterior_epred(fit_shifted_log_FLT)
 # summarize over conditions
 png(file="D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Posterior_Checks/RT_FLT_posterior_pred.png",
     width=18, height=12, units="cm",res = 400)
-par(mfrow = c( 3, 2))
+par(mfrow = c( 2, 3))
 
 # get data for 130Hz
 S130Hz_Congruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "S130Hz_congruent"])
 S130Hz_Incongruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "S130Hz_incongruent"])
-mean_130Hz_Congruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_congruent"])
-mean_130Hz_Incongruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_incongruent"]) 
+mean_130Hz_Stroop <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_incongruent"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "S130Hz_congruent"]) 
 
 # Plot 130 Figures
-hist(S130Hz_Congruent, main = "Congruent:  130Hz Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_130Hz_Congruent, col = "red", lwd = 3)
-hist(S130Hz_Incongruent, main = "Incongruent:  130Hz Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_130Hz_Incongruent, col = "red", lwd = 3)
+hist(S130Hz_Incongruent - S130Hz_Congruent, main = "Stroop:  130Hz Stimulation", xlab = c("RT in ms"))
+abline(v = mean_130Hz_Stroop, col = "red", lwd = 3)
+
 
 # get data for 20Hz
 S20Hz_Congruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "S20Hz_congruent"])
 S20Hz_Incongruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "S20Hz_incongruent"])
-mean_20Hz_Congruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_congruent"])
-mean_20Hz_Incongruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_incongruent"]) 
+mean_20Hz_Stroop <- mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_incongruent"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "S20Hz_congruent"]) 
 
 # Plot 20 Figures
-hist(S20Hz_Congruent, main = "Congruent:  20Hz Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_20Hz_Congruent, col = "red", lwd = 3)
-hist(S20Hz_Incongruent, main = "Incongruent:  20Hz Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_20Hz_Incongruent, col = "red", lwd = 3)
+hist(S20Hz_Incongruent - S20Hz_Congruent, main = "Stroop:  20Hz Stimulation", xlab = c("RT in ms"))
+abline(v = mean_20Hz_Stroop, col = "red", lwd = 3)
 
 # get data for OFF
 SOFF_Congruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "SOFF_congruent"])
 SOFF_Incongruent <- rowMeans(RT_FLT_pred[,RT_data$Contrast_F == "SOFF_incongruent"])
-mean_OFF_Congruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_congruent"])
-mean_OFF_Incongruent <- mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_incongruent"]) 
+mean_OFF_Stroop <- mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_incongruent"]) - mean(RT_data$RT_ms[RT_data$Contrast_F == "SOFF_congruent"]) 
 
-# Plot OFF Figures
-hist(SOFF_Congruent, main = "Congruent:  OFF Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_OFF_Congruent, col = "red", lwd = 3)
-hist(SOFF_Incongruent, main = "Incongruent:  OFF Stimulation", xlab = c("RT in ms"), breaks = 30)
-abline(v = mean_OFF_Incongruent, col = "red", lwd = 3)
+# Plot 20 Figures
+hist(SOFF_Incongruent - SOFF_Congruent, main = "Stroop:  OFF Stimulation", xlab = c("RT in ms"))
+abline(v = mean_OFF_Stroop, col = "red", lwd = 3)
 
+# Plot the difference between 20Hz overall and OFF and 130Hz
+S130Hz_Overall <- rowMeans(RT_FLT_pred[,RT_data$Stim_verb == "130Hz"])
+mean_130Hz_Overall <- mean(RT_data$RT_ms[RT_data$Stim_verb == "130Hz"])
+S20Hz_Overall <- rowMeans(RT_FLT_pred[,RT_data$Stim_verb == "20Hz"])
+mean_20Hz_Overall <- mean(RT_data$RT_ms[RT_data$Stim_verb == "20Hz"])
+SOFF_Overall <- rowMeans(RT_FLT_pred[,RT_data$Stim_verb == "OFF"])
+mean_OFF_Overall <- mean(RT_data$RT_ms[RT_data$Stim_verb == "OFF"])
+
+# Plot 20 vs 130 Figures
+hist(S20Hz_Overall - S130Hz_Overall, main = "20Hz vs 130Hz Overall", xlab = c("RT in ms"))
+abline(v = mean_20Hz_Overall-mean_130Hz_Overall, col = "red", lwd = 3)
+# Plot 20 vs OFF Figures
+hist(S20Hz_Overall - SOFF_Overall, main = "20Hz vs OFF Overall", xlab = c("RT in ms"))
+abline(v = mean_20Hz_Overall-mean_OFF_Overall, col = "red", lwd = 3)
 
 # save 
 dev.off()
@@ -336,43 +342,50 @@ acc_FLT_pred <- brms::posterior_epred(fit_log_FLT)
 # summarize over conditions
 png(file="D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Posterior_Checks/acc_FLT_posterior_pred.png",
     width=18, height=12, units="cm",res = 400)
-par(mfrow = c( 3, 2))
+par(mfrow = c( 2, 3))
 
 # get data for 130Hz
 S130Hz_Congruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "S130Hz_congruent"])
 S130Hz_Incongruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "S130Hz_incongruent"])
-mean_130Hz_Congruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "S130Hz_congruent"])
-mean_130Hz_Incongruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "S130Hz_incongruent"]) 
+mean_130Hz_Stroop <- mean(FLTRT$Error[FLTRT$Contrast_F == "S130Hz_incongruent"]) - mean(FLTRT$Error[FLTRT$Contrast_F == "S130Hz_congruent"]) 
 
 # Plot 130 Figures
-hist(S130Hz_Congruent, main = "Congruent:  130Hz Stimulation", xlab = c("Error in %"))
-abline(v = mean_130Hz_Congruent, col = "red", lwd = 3)
-hist(S130Hz_Incongruent, main = "Incongruent:  130Hz Stimulation", xlab = c("Error in %"))
-abline(v = mean_130Hz_Incongruent, col = "red", lwd = 3)
+hist(S130Hz_Incongruent - S130Hz_Congruent, main = "Stroop:  130Hz Stimulation", xlab = c("Error in %"))
+abline(v = mean_130Hz_Stroop, col = "red", lwd = 3)
+
 
 # get data for 20Hz
 S20Hz_Congruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "S20Hz_congruent"])
 S20Hz_Incongruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "S20Hz_incongruent"])
-mean_20Hz_Congruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "S20Hz_congruent"])
-mean_20Hz_Incongruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "S20Hz_incongruent"]) 
+mean_20Hz_Stroop <- mean(FLTRT$Error[FLTRT$Contrast_F == "S20Hz_incongruent"]) - mean(FLTRT$Error[FLTRT$Contrast_F == "S20Hz_congruent"]) 
 
 # Plot 20 Figures
-hist(S20Hz_Congruent, main = "Congruent:  20Hz Stimulation", xlab = c("Error in %"))
-abline(v = mean_20Hz_Congruent, col = "red", lwd = 3)
-hist(S20Hz_Incongruent, main = "Incongruent:  20Hz Stimulation", xlab = c("Error in %"))
-abline(v = mean_20Hz_Incongruent, col = "red", lwd = 3)
+hist(S20Hz_Incongruent - S20Hz_Congruent, main = "Stroop:  20Hz Stimulation", xlab = c("Error in %"))
+abline(v = mean_20Hz_Stroop, col = "red", lwd = 3)
 
 # get data for OFF
 SOFF_Congruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "SOFF_congruent"])
 SOFF_Incongruent <- rowMeans(acc_FLT_pred[,FLTRT$Contrast_F == "SOFF_incongruent"])
-mean_OFF_Congruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "SOFF_congruent"])
-mean_OFF_Incongruent <- mean(FLTRT$Error[FLTRT$Contrast_F == "SOFF_incongruent"]) 
+mean_OFF_Stroop <- mean(FLTRT$Error[FLTRT$Contrast_F == "SOFF_incongruent"]) - mean(FLTRT$Error[FLTRT$Contrast_F == "SOFF_congruent"]) 
 
-# Plot OFF Figures
-hist(SOFF_Congruent, main = "Congruent:  OFF Stimulation", xlab = c("Error in %"))
-abline(v = mean_OFF_Congruent, col = "red", lwd = 3)
-hist(SOFF_Incongruent, main = "Incongruent:  OFF Stimulation", xlab = c("Error in %"))
-abline(v = mean_OFF_Incongruent, col = "red", lwd = 3)
+# Plot 20 Figures
+hist(SOFF_Incongruent - SOFF_Congruent, main = "Stroop:  OFF Stimulation", xlab = c("Error in %"))
+abline(v = mean_OFF_Stroop, col = "red", lwd = 3)
+
+# Plot the difference between 20Hz overall and OFF and 130Hz
+S130Hz_Overall <- rowMeans(acc_FLT_pred[,FLTRT$Stim_verb == "130Hz"])
+mean_130Hz_Overall <- mean(FLTRT$Error[FLTRT$Stim_verb == "130Hz"])
+S20Hz_Overall <- rowMeans(acc_FLT_pred[,FLTRT$Stim_verb == "20Hz"])
+mean_20Hz_Overall <- mean(FLTRT$Error[FLTRT$Stim_verb == "20Hz"])
+SOFF_Overall <- rowMeans(acc_FLT_pred[,FLTRT$Stim_verb == "OFF"])
+mean_OFF_Overall <- mean(FLTRT$Error[FLTRT$Stim_verb == "OFF"])
+
+# Plot 20 vs 130 Figures
+hist(S20Hz_Overall - S130Hz_Overall, main = "20Hz vs 130Hz Overall", xlab = c("Error in %"))
+abline(v = mean_20Hz_Overall-mean_130Hz_Overall, col = "red", lwd = 3)
+# Plot 20 vs OFF Figures
+hist(S20Hz_Overall - SOFF_Overall, main = "20Hz vs OFF Overall", xlab = c("Error in %"))
+abline(v = mean_20Hz_Overall-mean_OFF_Overall, col = "red", lwd = 3)
 
 # save 
 dev.off()
