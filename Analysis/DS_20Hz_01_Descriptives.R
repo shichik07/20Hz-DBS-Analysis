@@ -40,7 +40,7 @@ summary_dst <- Demographics %>%
 # Now the same for the UPDRS data
 
 # load data
-path <- file.path("D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Original/Daten final/Ergebnisse/UPDRS.sav")
+path <- file.path("../Original/Daten final/Ergebnisse/UPDRS.sav")
 UPDRS_data <- read_sav(file = path) %>%
   mutate(Stim_verb = as.factor(case_when(
     Stim == 1 ~ "130Hz",
