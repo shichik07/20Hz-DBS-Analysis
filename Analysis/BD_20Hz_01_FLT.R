@@ -5,7 +5,6 @@
 # Date 11.01.2023
 ####
 
-# Address git : C/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis
 
 # load packages
 library(haven) # import SPSS files
@@ -15,6 +14,7 @@ library(readr)
 library(brms)
 library(hypr)
 library(tidybayes)
+library(here)
 
 # set directory
 wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
@@ -69,9 +69,6 @@ RT_data <- FLTRT %>%
          RT < 3,
          RT > 0.2) %>%
    mutate(RT_ms = RT*1000) 
-  # mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
-  #        SOFF = ifelse(Stim_verb == "OFF", 1, 0),
-  #        Congruent =ifelse(Congruency == "congruent", 0.5, -0.5))
 
 RT_data2 <-  FLTRT %>%
   filter(Correct_Response == 1)%>%
@@ -92,24 +89,8 @@ prior_weakly_informed<- c(
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
-# prior_weakly_informed<- c(
-#   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
-#   prior(normal(0 ,0.5), class = sigma, lb = 0),
-#   prior(uniform(0, min_Y), class = ndt),
-#   prior(normal(0,  0.3), class = b, coef = Congruent),
-#   prior(normal(0,  0.3), class = b, coef = S130Hz),
-#   prior(normal(0,  0.3), class = b, coef = SOFF),
-#   prior(normal(0,  0.3), class = b, coef = S130Hz:Congruent),
-#   prior(normal(0,  0.3), class = b, coef = SOFF:Congruent),
-#   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
-# )
-
-
 # brmsformula object List Wide
 m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (1 |Part_nr))
-#m1_FLT <- bf(RT_ms ~ 1  + S130Hz + SOFF + Congruent + S130Hz*Congruent + SOFF*Congruent +(1|Part_nr))
-
-#get_prior(formula = m1_FLT, data = RT_data, family = shifted_lognormal())
 
 #fit the first model
 fit_shifted_log_FLT <- brm(formula = m1_FLT,
@@ -127,49 +108,6 @@ fit_shifted_log_FLT <- brm(formula = m1_FLT,
 save(fit_shifted_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT1.rda")
 load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
 
-# posteriro predictive checks
-pp_check(fit_shifted_log_FLT, ndraws = 11, type = "hist")
-# Looks good for this model
-pp_check(fit_shifted_log_FLT, ndraws = 100, type = "dens_overlay")
-# Looks good for this model
-pp_check(fit_shifted_log_FLT, type = "boxplot", ndraws = 10)
-# A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat", stat = "mean")
-# looks really good
-pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
-# somewhat resonable
-pp_check(fit_shifted_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
-
-# Great, the model looks good. Lets see the effect sizes, 
-
-# first get variable names
-get_variables(fit_shifted_log_FLT)
-
-post_eff <- fit_shifted_log_FLT %>%
-  spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
-               b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF, sigma, ndt) %>%
-  mutate(Est_S130_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (-(1/3))*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Est_S130_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (1/3)*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Est_S20_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (1/6)*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Est_S20_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (-(1/6))*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Est_SOFF_I = exp(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (1/6)*b_Contrast_FStroop_20v130 + (-(1/3))*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Est_SOFF_C = exp(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (-(1/6))*b_Contrast_FStroop_20v130 + (1/3)*b_Contrast_FStroop_20vOFF) + sigma/2 + ndt,
-         Congruency = (Est_S20_I + Est_S130_I + Est_SOFF_I)/3 - (Est_S20_C + Est_S130_C + Est_SOFF_C)/3,
-         S20_vs_S130 = (Est_S20_I + Est_S20_C)/2 - (Est_S130_I + Est_S130_C)/2,
-         S20_vs_SOFF = (Est_S20_I + Est_S20_C)/2 - (Est_SOFF_I + Est_SOFF_C)/2,
-         Stroop_S20_vs_S130 = (Est_S20_I - Est_S20_C) - (Est_S130_I - Est_S130_C),
-         Stroop_S20_vs_SOFF =(Est_S20_I - Est_SOFF_C) - (Est_SOFF_I - Est_SOFF_C)) %>%
-  select(Congruency, S20_vs_S130, S20_vs_SOFF, Stroop_S20_vs_S130, Stroop_S20_vs_SOFF) %>%
-  summarise_draws()
-
-# Okay, we see a lot of variance (makes sense since the timing measurements were imprecise)
-# but it appears, there is no difference in RTs for any of the analyses. There was also no diffferences in Stroop effects.
 
 ## Next, let us look at the accuracy data
 
@@ -183,13 +121,10 @@ prior_weakly_informed_logreg<- c(
   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
 )
 
-
-#get_prior(formula = m1_SRT, data = RT_data, family = bernoulli(link = logit))
-
 # brmsformula object Item Specific
 m1_FLT_log <- bf(Error ~ 1  + Contrast_F + (1|Part_nr)) 
 
-#### Fit Inducer Models ####
+#### Fit Accuracy Model ####
 
 
 # we should consider varying non-decision times between the groups
@@ -206,44 +141,3 @@ fit_log_FLT <- brm(formula = m1_FLT_log,
 save(fit_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
 load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
 
-
-# posteriro predictive checks
-pp_check(fit_log_FLT, ndraws = 11, type = "hist")
-# Looks good for this model
-pp_check(fit_log_FLT, ndraws = 100, type = "dens_overlay")
-# Looks good for this model
-pp_check(fit_log_FLT, type = "boxplot", ndraws = 10)
-# A few observation outside, but our particpants had a deadline - cannot be modelled
-pp_check(fit_log_FLT, ndraws = 1000, type = "stat", stat = "mean")
-# looks good
-pp_check(fit_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Contrast_F")
-# looks good
-pp_check(fit_log_FLT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "Part_nr")
-
-# first get variable names
-get_variables(fit_log_FLT)
-
-
-
-post_eff_logreg <- fit_log_FLT %>%
-  spread_draws(b_Intercept, b_Contrast_FCongruency, b_Contrast_FStim_20v130, b_Contrast_FStim_20vOFF, 
-               b_Contrast_FStroop_20v130, b_Contrast_FStroop_20vOFF) %>%
-  mutate(Est_S130_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (-(1/3))*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF),
-         Est_S130_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (-(2/3))*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                          + (1/3)*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF),
-         Est_S20_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (1/6)*b_Contrast_FStroop_20v130 + (1/6)*b_Contrast_FStroop_20vOFF),
-         Est_S20_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (1/3)*b_Contrast_FStim_20vOFF
-                         + (-(1/6))*b_Contrast_FStroop_20v130 + (-(1/6))*b_Contrast_FStroop_20vOFF),
-         Est_SOFF_I = plogis(b_Intercept + (-0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (1/6)*b_Contrast_FStroop_20v130 + (-(1/3))*b_Contrast_FStroop_20vOFF),
-         Est_SOFF_C = plogis(b_Intercept + (0.5)*b_Contrast_FCongruency + (1/3)*b_Contrast_FStim_20v130 + (-(2/3))*b_Contrast_FStim_20vOFF
-                          + (-(1/6))*b_Contrast_FStroop_20v130 + (1/3)*b_Contrast_FStroop_20vOFF),
-         Congruency = (Est_S20_I + Est_S130_I + Est_SOFF_I)/3 - (Est_S20_C + Est_S130_C + Est_SOFF_C)/3,
-         S20_vs_S130 = (Est_S20_I + Est_S20_C)/2 - (Est_S130_I + Est_S130_C)/2,
-         S20_vs_SOFF = (Est_S20_I + Est_SOFF_C)/2 - (Est_SOFF_I + Est_SOFF_C)/2,
-         Stroop_S20_vs_S130 = (Est_S20_I - Est_S20_C) - (Est_S130_I - Est_S130_C),
-         Stroop_S20_vs_SOFF =(Est_S20_I - Est_S20_C) - (Est_SOFF_I - Est_SOFF_C)) %>%
-  select(Congruency, S20_vs_S130, S20_vs_SOFF, Stroop_S20_vs_S130, Stroop_S20_vs_SOFF) %>%
-  summarise_draws()
