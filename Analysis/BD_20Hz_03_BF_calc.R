@@ -3,10 +3,10 @@
 # Load models and calculate Bayes Factors for model components in the Go-NoGo task
 # Date 05.10.2023
 ####
-#wd ='E:/20Hz/Data/Modelle/BF_mods'
-#wd = 'C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/BF_mods'
+
 wd = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/BF_mods"
 setwd(wd)
+
 # Load packages
 library(brms)
 library(dplyr)
@@ -153,7 +153,6 @@ conditional_effect_calc_shift_GNG <- function(model){
 brms_epred_calc_GNG_RT <- function(model){
   preds <- brms::posterior_epred(model)
   # load FLT data
-  #GNG<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/GoNoGo.csv") %>%
   GNG<- read_csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted/GoNoGo.csv") %>%
     mutate(Error = 1 - Correct_Response) %>%
     mutate(StimCon = as_factor(case_when(
@@ -201,7 +200,6 @@ brms_epred_calc_GNG_RT <- function(model){
 brms_epred_calc_GNG_acc <- function(model){
   preds <- brms::posterior_epred(model)
   # load GNG data
-  #GNG<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/GoNoGo.csv") %>%
   GNG<- read_csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted/GoNoGo.csv") %>%
     mutate(Error = 1 - Correct_Response) %>%
     mutate(StimCon = as_factor(case_when(
@@ -276,7 +274,6 @@ conditional_effect_calc_acc_GNG <- function(model){
 brms_epred_calc_SRT <- function(model, ana){
   preds <- brms::posterior_epred(model)
   # load FLT data
-  #SimpleRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/SimpleRT.csv") %>%
   SimpleRT<- read_csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted/SimpleRT.csv") %>%
     
     mutate(Error = 1 - Correct_Response) %>%
@@ -337,7 +334,6 @@ conditional_effect_calc_SRT <- function(model){
 brms_epred_calc_FLT <- function(model, ana){
   preds <- brms::posterior_epred(model)
   # load FLT data
-  #FLTRT<- read_csv(file = "C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted/flanker.csv") %>%
   FLTRT<- read_csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted/flanker.csv") %>%
     mutate(Error = 1 - Correct_Response) %>%
     mutate(StimCon = as_factor(case_when(
@@ -424,9 +420,6 @@ conditional_effect_calc_FLT <- function(model){
 ### First we get all the variables we need to call our readily calculated models
 
 # contrast names seperately
-
-#fullmod_loc <- r"{E:\20Hz\Data\Modelle}"
-#part_mod_loc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
 parameter_RT_GNG <- c("GoDiff_20v130",
                "GoDiff_20vOFF")
 
@@ -450,13 +443,7 @@ parameter_FLT <- c(
   "Stroop_20vOFF"
 )
 
-#model_RT <- "RT"
-#model_Acc <- "Acc"
 
-#Partial_models_saveloc <- r"{E:\20Hz\Data\Modelle\BF_mods}"
-#Full_models_saveloc <- r"{E:\20Hz\Data\Modelle}"
-#Partial_models_saveloc <-'C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/BF_mods'
-#Full_models_saveloc <- 'C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle'
 Partial_models_saveloc <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/BF_mods"
 Full_models_saveloc <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/"
 
@@ -560,9 +547,8 @@ for (tsk in tasks){
 }
 
 #save data
-#write.table(Full_Model_Info , file = "E:/20Hz/Data/Modelle/Full_Results.csv")
-write.table(Full_Model_Info , file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results1.csv")
-Full_Model_Info2 <- read.csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results1.csv", header = TRUE, sep = "")
+write.table(Full_Model_Info , file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results.csv")
+Full_Model_Info2 <- read.csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results.csv", header = TRUE, sep = "")
 Full_Model_Info2 <- Full_Model_Info2 %>%
   mutate(BF_new = round(BF, 1),
          estimate_new = round(estimate, 3),
