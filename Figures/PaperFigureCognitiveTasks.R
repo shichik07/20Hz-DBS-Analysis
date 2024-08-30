@@ -2,10 +2,8 @@ library(haven) # import SPSS files
 library(dplyr)
 library(tidyr)
 library(readr)
-#(tidybayes)
 library(ggtext)
 library(colorspace)
-#library(ragg)
 library(ggplot2)
 library(forcats)# so we can simply reorder the variables with fct_inorder
 library(ggsci)
@@ -16,13 +14,9 @@ library(ggdist)
 
 
 # set directory
-
 wd = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
-#wd = "/home/jules/Dropbox/PhD_Thesis/UniOL/Julius/20Hz/Data/Extracted"
-#wd = "C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz/Data/Extracted"
 setwd(wd)
 
-sequential_hcl(4, palette = "YlGnBu")
 
 #vars
 dot_size <- 0.5
@@ -49,9 +43,6 @@ SimpleRT_cleanRT <- SimpleRT %>% filter(Correct_Response == 1,
 SimpleRT_individuals <- SimpleRT_cleanRT %>%
   group_by(Stim_verb, Part_nr) %>%
   summarise(RT = median(RT))
-
-
-pal_futurama("planetexpress")(4)
 
 # Colors
 pal1 <- c("#FF6F00FF", "#008EA0FF", "#8A4198FF")
@@ -103,7 +94,6 @@ SRT_RT_plt <- SimpleRT_cleanRT %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     limits = c(200, 2000),
     breaks = seq(200, 2000, by = 400),
@@ -124,7 +114,6 @@ SRT_RT_plt <- SimpleRT_cleanRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono",size = text_size),
     axis.text.x = element_text(
@@ -134,7 +123,6 @@ SRT_RT_plt <- SimpleRT_cleanRT %>%
     ),
     axis.title.x = element_text(margin = margin(t = 10),
                                 size = text_size),
-   # plot.title = element_markdown(face = "bold", size = text_size),
     plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
     plot.subtitle = element_text(
       color = "grey40", hjust = 0,
@@ -157,8 +145,6 @@ SRT_Error_plt <- SimpleRT %>%
   group_by(Stim_verb) %>%
   summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1)) %>%
   ggplot(aes(x = fct_rev(Stim_verb), y = prop_error 
-             #color = Stim_verb,
-             #fill = after_scale(lighten(color, .5))
              ),
          width = .25) + 
   geom_bar(aes(color = Stim_verb,
@@ -184,7 +170,6 @@ SRT_Error_plt <- SimpleRT %>%
     fontface = "bold",
     size = 2.5,
     vjust = move_sum_by+2,
-    #hjust = -0.7,
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) + 
@@ -203,7 +188,6 @@ SRT_Error_plt <- SimpleRT %>%
   labs(
     x = NULL,
     y = "Error in %",
-    #title = "Choice Selection Task",
     subtitle = "Error",
     fill = "Stimulation"
   ) +
@@ -212,9 +196,7 @@ SRT_Error_plt <- SimpleRT %>%
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
-    #legend.position="bottom",
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
@@ -314,7 +296,6 @@ FLT_RT_plt <- Flanker_cleanRT %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     limits = c(200, 2000),
     breaks = seq(200, 2000, by = 400),
@@ -335,9 +316,7 @@ FLT_RT_plt <- Flanker_cleanRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(
-    
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono",size = text_size),
     axis.text.x = element_text(
@@ -373,10 +352,6 @@ FLT_Error_plt <- Flanker %>%
   group_by(Stim_verb, Congruency) %>%
   summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1)) %>%
   ggplot(aes(x = fct_rev(Stim_verb), y = prop_error, fill = Congruency),
-         #fill = Stim_verb,
-         #fill = after_scale(desaturate(lighten(fill, .8), .4))),
-         #color = Stim_verb,
-         #color = after_scale(darken(color, .1, space = "HLS")),
          width = .25) + 
   geom_bar(aes(fill = Congruency, 
                fill = after_scale(lighten(fill, .5))),
@@ -406,11 +381,9 @@ FLT_Error_plt <- Flanker %>%
     fontface = "bold",
     size = 2.5,
     vjust = move_sum_by+2,
-    #hjust = -0.7,
     position = position_dodge(width = 1),
     show_guide = FALSE
   )  +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     labels = scales::percent,
     limits = c(0, 0.62),
@@ -426,7 +399,6 @@ FLT_Error_plt <- Flanker %>%
   labs(
     x = NULL,
     y = "Error in %",
-    #title = "Flanker Task",
     subtitle = "Error"
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
@@ -434,9 +406,7 @@ FLT_Error_plt <- Flanker %>%
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
-    #legend.position="bottom",
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
@@ -470,7 +440,5 @@ SRT_comb <- ggarrange(SRT_RT_plt + rremove("legend"), SRT_Error_plt, FLT_RT_plt 
                       font.label=list(color="black",size=10))
 
 save_n <- "Flanker_fin.tiff"
-#save_path <- "C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
-#save_path <- "/home/jules/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
 save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
 ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)

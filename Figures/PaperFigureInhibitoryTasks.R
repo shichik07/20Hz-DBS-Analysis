@@ -14,10 +14,7 @@ library(ggdist)
 
 
 # set directory
-
 wd = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
-#wd = "/home/jules/Dropbox/PhD_Thesis/UniOL/Julius/20Hz/Data/Extracted"
-#wd = "C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz/Data/Extracted"
 setwd(wd)
 
 #vars
@@ -127,7 +124,6 @@ Stop_RT_plt <- SSRT %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     limits = c(200, 2000),
     breaks = seq(200, 2000, by = 400),
@@ -148,7 +144,6 @@ Stop_RT_plt <- SSRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(panel.grid.minor = element_blank(),
-        #panel.grid.major.y = element_blank(),
         axis.ticks = element_blank(),
         axis.text.y = element_text(family = "Roboto Mono",size = text_size),
         axis.text.x = element_text(
@@ -158,7 +153,6 @@ Stop_RT_plt <- SSRT %>%
         ),
         axis.title.x = element_text(margin = margin(t = 10),
                                     size = text_size),
-        # plot.title = element_markdown(face = "bold", size = text_size),
         plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
         plot.subtitle = element_text(
           color = "grey40", hjust = 0,
@@ -184,8 +178,6 @@ Stop_Error_plt <- StoppSignal %>%
   group_by(Stim_verb) %>%
   summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1)) %>%
   ggplot(aes(x = fct_rev(Stim_verb), y = prop_error 
-             #color = Stim_verb,
-             #fill = after_scale(lighten(color, .5))
   ),
   width = .25) + 
   geom_bar(aes(color = Stim_verb,
@@ -211,7 +203,6 @@ Stop_Error_plt <- StoppSignal %>%
     fontface = "bold",
     size = 2.5,
     vjust = move_sum_by+2,
-    #hjust = -0.7,
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) + 
@@ -230,7 +221,6 @@ Stop_Error_plt <- StoppSignal %>%
   labs(
     x = NULL,
     y = "Error in %",
-    #title = "Choice Selection Task",
     subtitle = "Error",
     fill = "Stimulation"
   ) +
@@ -239,9 +229,7 @@ Stop_Error_plt <- StoppSignal %>%
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
-    #legend.position="bottom",
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
@@ -347,7 +335,6 @@ GNG_RT_plt <-  GoNoGo_cleanRT %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     limits = c(200, 2000),
     breaks = seq(200, 2000, by = 400),
@@ -370,7 +357,6 @@ GNG_RT_plt <-  GoNoGo_cleanRT %>%
   theme(
     
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono",size = text_size),
     axis.text.x = element_text(
@@ -439,11 +425,9 @@ GNG_Error_plt <- GoNoGo %>%
     fontface = "bold",
     size = 2.5,
     vjust = move_sum_by+2,
-    #hjust = -0.7,
     position = position_dodge(width = 1),
     show_guide = FALSE
   )  +
-  #coord_flip(xlim = c(1.2, NA), clip = "on") +
   scale_y_continuous(
     labels = scales::percent,
     limits = c(0, 0.62),
@@ -459,7 +443,6 @@ GNG_Error_plt <- GoNoGo %>%
   labs(
     x = NULL,
     y = "Error in %",
-    #title = "Flanker Task",
     subtitle = "Error"
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
@@ -467,9 +450,7 @@ GNG_Error_plt <- GoNoGo %>%
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
-    #legend.position="bottom",
     panel.grid.minor = element_blank(),
-    #panel.grid.major.y = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
@@ -503,7 +484,5 @@ SRT_comb <- ggarrange(Stop_RT_plt + rremove("legend"), Stop_Error_plt, GNG_RT_pl
                       font.label=list(color="black",size=10))
 
 save_n <- "Inhibition_fin.tiff"
-#save_path <- "C:/Users/doex9445/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
-#save_path <- "/home/jules/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
 save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
 ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)
