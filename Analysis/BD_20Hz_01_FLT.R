@@ -1,7 +1,6 @@
 #####
 # Author: Julius Kricheldorff
 # Analysis of the flanker task
-# Includes task data the Flanker-, Stop-Signal-, Go-NoGo and Simple RT task
 # Date 11.01.2023
 ####
 
@@ -14,7 +13,6 @@ library(readr)
 library(brms)
 library(hypr)
 library(tidybayes)
-library(here)
 
 # set directory
 wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted"
@@ -32,7 +30,6 @@ FLTRT<- read_csv(file = "flanker.csv") %>%
 
 
 # create a contrast matrix for our comparisons of interest
-# Contrasts only for the list-wide effect only
 FLT_Contrast <- hypr(
   Congruency = (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3,
   Stim_20v130 = (S20Hz_incongruent + S20Hz_congruent)/2 ~ (S130Hz_incongruent + S130Hz_congruent)/2,
@@ -76,7 +73,7 @@ RT_data2 <-  FLTRT %>%
 
 data_excluded <- 1-nrow(RT_data)/nrow(RT_data2)
 
-# Prior informed weakly Item Specific
+# Prior informed weakly 
 prior_weakly_informed<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
@@ -105,8 +102,8 @@ fit_shifted_log_FLT <- brm(formula = m1_FLT,
                            chains =4
 )
 
-save(fit_shifted_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT1.rda")
-load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
+save(fit_shifted_log_FLT, file = "../Modelle/shifted_log_FLT1.rda")
+load(file = "../Modelle/shifted_log_FLT.rda")
 
 
 ## Next, let us look at the accuracy data
@@ -138,6 +135,6 @@ fit_log_FLT <- brm(formula = m1_FLT_log,
                       save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                       chains =4)
 
-save(fit_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
-load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_FLT.rda")
+save(fit_log_FLT, file = "../Modelle/log_reg_FLT.rda")
+load(file = "../Modelle/log_reg_FLT.rda")
 
