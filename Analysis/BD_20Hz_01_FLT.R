@@ -66,9 +66,12 @@ contrasts(FLTRT$Contrast_F)
 # than 200ms a longer than 2s
 RT_data <- FLTRT %>%
   filter(Correct_Response == 1,
-         RT <3,
+         RT < 3,
          RT > 0.2) %>%
-  mutate(RT_ms = RT*1000)
+   mutate(RT_ms = RT*1000) 
+  # mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
+  #        SOFF = ifelse(Stim_verb == "OFF", 1, 0),
+  #        Congruent =ifelse(Congruency == "congruent", 0.5, -0.5))
 
 RT_data2 <-  FLTRT %>%
   filter(Correct_Response == 1)%>%
@@ -81,17 +84,30 @@ prior_weakly_informed<- c(
   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
   prior(normal(0 ,0.5), class = sigma, lb = 0),
   prior(uniform(0, min_Y), class = ndt),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FCongruency), 
+  prior(normal(0,  0.3), class = b, coef = Contrast_FCongruency),
   prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20v130),
-  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF), 
+  prior(normal(0,  0.3), class = b, coef = Contrast_FStim_20vOFF),
   prior(normal(0,  0.3), class = b, coef = Contrast_FStroop_20v130),
   prior(normal(0,  0.3), class = b, coef = Contrast_FStroop_20vOFF),
   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
 )
 
+# prior_weakly_informed<- c(
+#   prior(normal(6.5, 0.5), class = Intercept, lb = 0),
+#   prior(normal(0 ,0.5), class = sigma, lb = 0),
+#   prior(uniform(0, min_Y), class = ndt),
+#   prior(normal(0,  0.3), class = b, coef = Congruent),
+#   prior(normal(0,  0.3), class = b, coef = S130Hz),
+#   prior(normal(0,  0.3), class = b, coef = SOFF),
+#   prior(normal(0,  0.3), class = b, coef = S130Hz:Congruent),
+#   prior(normal(0,  0.3), class = b, coef = SOFF:Congruent),
+#   prior(normal(0,  0.3), class = sd, coef = Intercept, group = Part_nr)
+# )
+
 
 # brmsformula object List Wide
-m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (1|Part_nr))
+m1_FLT <- bf(RT_ms ~ 1  + Contrast_F + (1 |Part_nr))
+#m1_FLT <- bf(RT_ms ~ 1  + S130Hz + SOFF + Congruent + S130Hz*Congruent + SOFF*Congruent +(1|Part_nr))
 
 #get_prior(formula = m1_FLT, data = RT_data, family = shifted_lognormal())
 
@@ -108,7 +124,7 @@ fit_shifted_log_FLT <- brm(formula = m1_FLT,
                            chains =4
 )
 
-save(fit_shifted_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
+save(fit_shifted_log_FLT, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT1.rda")
 load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/shifted_log_FLT.rda")
 
 # posteriro predictive checks

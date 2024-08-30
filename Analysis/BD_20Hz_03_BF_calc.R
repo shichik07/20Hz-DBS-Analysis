@@ -20,6 +20,7 @@ library(xtable)
 library(stringr)
 library(emmeans)
 library(tidybayes)
+library(readr)
 
 
 # Set a seed for sake of reproducibility
@@ -559,9 +560,9 @@ for (tsk in tasks){
 }
 
 #save data
-write.table(Full_Model_Info , file = "E:/20Hz/Data/Modelle/Full_Results.csv")
-write.table(Full_Model_Info , file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results.csv")
-Full_Model_Info2 <- read.csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results.csv", header = TRUE, sep = "")
+#write.table(Full_Model_Info , file = "E:/20Hz/Data/Modelle/Full_Results.csv")
+write.table(Full_Model_Info , file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results1.csv")
+Full_Model_Info2 <- read.csv(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/Full_Results1.csv", header = TRUE, sep = "")
 Full_Model_Info2 <- Full_Model_Info2 %>%
   mutate(BF_new = round(BF, 1),
          estimate_new = round(estimate, 3),

@@ -216,7 +216,18 @@ prior_weakly_informed_logreg2<- c(
   prior(normal(0,  1.5), class = sd, coef = Intercept, group = Part_nr)
 )
 
+fit_log_flanker2 <- brm(formula = m1_GoNoGo_log,
+                        family = bernoulli(link = logit),
+                        data = GoNoGo,
+                        prior = prior_weakly_informed_logreg2,
+                        warmup = 2000,
+                        iter = 12000,# 20000 is the limit necessary for bridge sampling
+                        cores = 4, seed = 423,
+                        save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
+                        chains =4)
 
+save(fit_log_flanker2, file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_GNG.rda")
+load(file = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/log_reg_GNG.rda")
 
 # we should consider varying non-decision times between the groups
  

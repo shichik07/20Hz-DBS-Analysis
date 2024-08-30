@@ -15,7 +15,7 @@ library(readr)
 library(ggplot2)
 
 # set directory
-setwd('C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Extracted')
+setwd('D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Extracted')
 
 # load data
 Demographics<- read_csv2(file = "PartChars.csv") 
@@ -40,7 +40,7 @@ summary_dst <- Demographics %>%
 # Now the same for the UPDRS data
 
 # load data
-path <- file.path("C:/Users/doex9445/Dateien/Julius/20Hz-DBS-Analysis/Data/Original/Daten final/Ergebnisse/UPDRS.sav")
+path <- file.path("D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Original/Daten final/Ergebnisse/UPDRS.sav")
 UPDRS_data <- read_sav(file = path) %>%
   mutate(Stim_verb = as.factor(case_when(
     Stim == 1 ~ "130Hz",

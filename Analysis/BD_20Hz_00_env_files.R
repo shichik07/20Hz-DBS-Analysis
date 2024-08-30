@@ -3,7 +3,7 @@
 # Install packagaes necessary for recreating the analysis using renv
 # Date 25.07.2024
 ####
-wd = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Data/Modelle/BF_mods"
+wd = "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis"
 setwd(wd)
 
 library(brms)
@@ -18,11 +18,6 @@ library(xtable)
 library(stringr)
 library(emmeans)
 library(tidybayes)
-
-library(haven) # import SPSS files
-library(dplyr)
-library(tidyr)
-library(readr)
 library(ggtext)
 library(colorspace)
 library(ggplot2)
@@ -32,3 +27,6 @@ library(plotrix) # to calculate standard error
 library(ggpubr)
 library(stringr)
 library(ggdist)
+library(cowplot)
+library(purrr)
+

@@ -41,7 +41,7 @@ SRT_Contrast
 
 # assign the generated contrast matrix to the List Wide Factor
 contrasts(SimpleRT$StimCon) <- contr.hypothesis(SRT_Contrast)
-contrasts(SimpleRT$StimCon)   
+contrasts(SimpleRT$StimCon)
 
 
 # for the RT analysis we filter only correct trials, and exclude trials shorter 
@@ -71,7 +71,7 @@ prior_weakly_informed<- c(
 
 
 # brmsformula object List Wide
-m1_SRT <- bf(RT_ms ~ 1  + StimCon + (1|Part_nr))
+m1_SRT <- bf(RT_ms ~ 1  + StimCon + (1| Part_nr))
 
 #get_prior(formula = m1_SRT, data = RT_data, family = shifted_lognormal())
 
@@ -101,7 +101,7 @@ pp_check(fit_shifted_log_SRT, type = "boxplot", ndraws = 10)
 # A few observation outside, but our particpants had a deadline - cannot be modelled
 pp_check(fit_shifted_log_SRT, ndraws = 1000, type = "stat", stat = "mean")
 # looks good
-pp_check(fit_shifted_log_SRT, ndraws = 1000, type = "stat_grouped", stat = "mean", group = "StimCon")
+pp_check(fit_shifted_log_SRT, ndraws = 1000, type = "stat_grouped", stat = "median", group = "StimCon")
 # looks good
 
 # Great, the model looks perfect. Lets see the effect sizes, 
@@ -144,8 +144,8 @@ fit_logReg_SRT <- brm(formula = m1_SRT_log,
                                   family = bernoulli(link = logit),
                                   data = SimpleRT,
                                   prior = prior_weakly_informed_logreg,
-                                  warmup = 2000,
-                                  iter = 12000,# 20000 is the limit necessary for bridge sampling
+                                  warmup = 4000,
+                                  iter = 14000,# 20000 is the limit necessary for bridge sampling
                                   cores = 4, seed = 423,
                                   save_pars = save_pars(all = TRUE), # must be set to true for bridgesampling
                                   chains =4)
