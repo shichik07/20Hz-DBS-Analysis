@@ -6,3 +6,4 @@ Output/
 *.html
 *.png
 *.Rhistory
+*.Rprofile
