@@ -20,8 +20,6 @@ set.seed(32936)
 
 
 wd <-"D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis"
-#Data/Modelle/BF_mods"
-#setwd('E:/20Hz/Data/Modelle/BF_mods')
 setwd(wd)
 
 ###### Functions:
@@ -282,7 +280,6 @@ for(mods in 1:length(FLT_RT_mods)){
 ##### Now the same for the Flanker Error data
 
 
-# Define formulas so we can loop through them
 # Define formulas so we can loop through them
 FLT_Contrast <- hypr(
   Congruency = (S130Hz_congruent + SOFF_congruent + S20Hz_congruent)/3 ~ (S130Hz_incongruent + SOFF_incongruent + S20Hz_incongruent)/3,
