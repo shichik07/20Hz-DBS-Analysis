@@ -139,8 +139,8 @@ Stop_RT_plt <- SSRT %>%
   labs(
     x = NULL,
     y = "RT in ms",
-    title = "Signal Change Task",
-    subtitle = "SSRT"
+    title = "Stop-Change Task",
+    subtitle = "SCRT"
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(panel.grid.minor = element_blank(),
