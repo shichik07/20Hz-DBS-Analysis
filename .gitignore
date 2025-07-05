@@ -1,7 +1,9 @@
 Data/
 Analysis/BD_20Hz_04_PostHoc_LEDDcorrelations_files/
+Figures/Paper/
 renv/
 Trash/
+Linting/
 OSF/
 Output/
 /*.png
@@ -9,4 +11,7 @@ Output/
 *.png
 *.Rhistory
 *.Rprofile
+
+# Ignore all TIFF files in all directories
+**/*.tiff
 *.tiff
