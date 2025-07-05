@@ -32,7 +32,7 @@ SimpleRT<- read_csv(file = "SimpleRT.csv") %>%
     Stim_verb == "130Hz" ~ "S130Hz",
     Stim_verb == "20Hz" ~ "S20Hz",
     Stim_verb == "OFF" ~ "SOFF",
-    
+
   )))
 
 SimpleRT_cleanRT <- SimpleRT %>% filter(Correct_Response == 1,
@@ -50,23 +50,23 @@ pal1 <- c("#FF6F00FF", "#008EA0FF", "#8A4198FF")
 pal <- c("#253494", "#56B4E9")
 
 
-SRT_RT_plt <- SimpleRT_cleanRT %>% 
-  group_by(Stim_verb, Part_nr) %>% 
+SRT_RT_plt <- SimpleRT_cleanRT %>%
+  group_by(Stim_verb, Part_nr) %>%
   mutate(Median_RT = mean(RT)) %>%
-  ggplot(aes(x = fct_rev(Stim_verb), y = RT)) + 
+  ggplot(aes(x = fct_rev(Stim_verb), y = RT)) +
   ggdist::stat_halfeye(
     aes(fill = Stim_verb,
         fill = after_scale(lighten(fill, .5))),
-    adjust = .8, 
-    width = .5, 
+    adjust = .8,
+    width = .5,
     .width = 0,
-    justification = -.5, 
+    justification = -.5,
     point_color = NA,
     position = position_dodge(width = 1)
   )+
   geom_boxplot(#aes(color = Stim_verb,
                   # ),
-    width = .35, 
+    width = .35,
     outlier.shape = NA,
     show_guide = FALSE
   ) +
@@ -99,11 +99,22 @@ SRT_RT_plt <- SimpleRT_cleanRT %>%
     breaks = seq(200, 2000, by = 400),
     expand = c(.001, .001)
   ) +
+  # Add significance annotation for 20Hz vs 130Hz (asterisk)
+  geom_path(data = data.frame(x = c(2, 2, 3, 3), 
+                             y = c(1800, 1850, 1850, 1800), 
+                             Stim_verb = rep("dummy", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5, y = 1870, label = "*", 
+           size = 2.5, fontface = "bold") +
   scale_color_manual(values = pal1, guide = "none") +
   scale_fill_manual(values = pal1, guide = "none") +
-  guides(fill = guide_legend(override.aes = list(shape = NA, 
+  guides(fill = guide_legend(override.aes = list(shape = NA,
                                                  size = guide_size,
-                                                 linetype = 0, 
+                                                 linetype = 0,
                                                  label.position = "bottom"))
   ) +
   labs(
@@ -113,17 +124,20 @@ SRT_RT_plt <- SimpleRT_cleanRT %>%
     subtitle = "RT"
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
-  theme(panel.grid.minor = element_blank(),
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.grid.minor = element_blank(),
     axis.ticks = element_blank(),
-    axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+    axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
-      color = rev(darken(pal1, .1, space = "HLS")), 
+      color = rev(darken(pal1, .1, space = "HLS")),
       size = text_size,
       face = "bold"
     ),
     axis.title.x = element_text(margin = margin(t = 10),
                                 size = text_size),
-    plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+    plot.title = element_text(face = "bold", size = text_size, margin = margin(0, 0, 3, 0)),
     plot.subtitle = element_text(
       color = "grey40", hjust = 0,
       margin = margin(0, 0, 20, 0)
@@ -144,9 +158,9 @@ SimpleError_individual <- SimpleRT %>%
 SRT_Error_plt <- SimpleRT %>%
   group_by(Stim_verb) %>%
   summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1)) %>%
-  ggplot(aes(x = fct_rev(Stim_verb), y = prop_error 
+  ggplot(aes(x = fct_rev(Stim_verb), y = prop_error
              ),
-         width = .25) + 
+         width = .25) +
   geom_bar(aes(color = Stim_verb,
                fill = after_scale(lighten(color, .5))), stat = "identity", position = position_dodge(), width = .5) +
   geom_point(data = SimpleError_individual,
@@ -172,16 +186,27 @@ SRT_Error_plt <- SimpleRT %>%
     vjust = move_sum_by+2,
     position = position_dodge(width = 1),
     show_guide = FALSE
-  ) + 
+  ) +
   scale_y_continuous(
     labels = scales::percent,
     limits = c(0, 0.63),
     breaks = seq(0.1, 1.0, by = .2),
     expand = c(.001, .001)
   )  +
+  # Add significance annotation for 20Hz vs 130Hz (asterisk)
+  geom_path(data = data.frame(x = c(2, 2, 3, 3), 
+                             y = c(0.45, 0.48, 0.48, 0.45), 
+                             Stim_verb = rep("dummy", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5, y = 0.50, label = "*", 
+           size = 2.5, fontface = "bold") +
   scale_fill_manual(values = pal1,  guide = "none") +
   scale_color_manual(values = pal1, name="Stimulation\nCondition")+
-  guides(color = guide_legend(override.aes = list(shape = NA, 
+  guides(color = guide_legend(override.aes = list(shape = NA,
                                                  size = guide_size,
                                                  linetype = 0))
   ) +
@@ -193,6 +218,8 @@ SRT_Error_plt <- SimpleRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
@@ -200,7 +227,7 @@ SRT_Error_plt <- SimpleRT %>%
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
-      color = rev(darken(pal1, .1, space = "HLS")), 
+      color = rev(darken(pal1, .1, space = "HLS")),
       size = text_size,
       face = "bold"
     ),
@@ -217,7 +244,7 @@ SRT_Error_plt <- SimpleRT %>%
       margin = margin(20, 0, 0, 0)),
     plot.margin = margin(15, 15, 10, 15)
   ) +
-  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), 
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se),
                 alpha = 0.5, position = position_dodge(width = 0.8),
                 width = 0.5)
 
@@ -229,7 +256,7 @@ Flanker<- read_csv(file = "flanker.csv") %>%
     Stim_verb == "130Hz" ~ "S130Hz",
     Stim_verb == "20Hz" ~ "S20Hz",
     Stim_verb == "OFF" ~ "SOFF",
-    
+
   )))
 
 #vars
@@ -249,21 +276,21 @@ Flanker_individuals <- Flanker_cleanRT %>%
   mutate(id = as_factor(case_when(
     Congruency == "incongruent" ~ as.numeric(Part_nr)+21,
     Congruency == "congruent" ~ as.numeric(Part_nr)
-  ))) 
+  )))
 
-FLT_RT_plt <- Flanker_cleanRT %>% 
-  group_by(Stim_verb, Part_nr) %>% 
-  ggplot(aes(x = fct_rev(Stim_verb), y = RT, fill = Congruency)) + 
+FLT_RT_plt <- Flanker_cleanRT %>%
+  group_by(Stim_verb, Part_nr) %>%
+  ggplot(aes(x = fct_rev(Stim_verb), y = RT, fill = Congruency)) +
   ggdist::stat_halfeye(
     aes(fill = Congruency,
         fill = after_scale(lighten(fill, .5))),
-    adjust = .8, 
-    width = .5, 
+    adjust = .8,
+    width = .5,
     .width = 0,
-    justification = -.5, 
+    justification = -.5,
     point_color = NA,
     position = position_dodge(width = 1)
-  ) + 
+  ) +
   geom_boxplot(
     aes(fill = Congruency,
         fill = after_scale(lighten(fill, 1, space = "HLS"))),
@@ -303,9 +330,9 @@ FLT_RT_plt <- Flanker_cleanRT %>%
   ) +
   scale_color_manual(values = pal, guide = "none") +
   scale_fill_manual(values = pal, labels = c("Congruent", "Incongruent" )) +
-  guides(fill = guide_legend(override.aes = list(shape = NA, 
+  guides(fill = guide_legend(override.aes = list(shape = NA,
                                                  size = guide_size,
-                                                 linetype = 0, 
+                                                 linetype = 0,
                                                  label.position = "bottom"))
   ) +
   labs(
@@ -316,17 +343,19 @@ FLT_RT_plt <- Flanker_cleanRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
     panel.grid.minor = element_blank(),
     axis.ticks = element_blank(),
-    axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+    axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
-      color = rev(darken(pal1, .1, space = "HLS")), 
+      color = rev(darken(pal1, .1, space = "HLS")),
       size = text_size,
       face = "bold"
     ),
     axis.title.x = element_text(margin = margin(t = 10),
                                 size = text_size),
-    plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+    plot.title = element_text(face = "bold", size = text_size, margin = margin(0, 0, 3, 0)),
     plot.subtitle = element_text(
       color = "grey40", hjust = 0,
       margin = margin(0, 0, 20, 0)
@@ -346,16 +375,16 @@ SimpleError_individual <- Flanker %>%
   mutate(id = as_factor(case_when(
     Congruency == "incongruent" ~ as.numeric(Part_nr)+21,
     Congruency == "congruent" ~ as.numeric(Part_nr)
-  ))) 
+  )))
 
 FLT_Error_plt <- Flanker %>%
   group_by(Stim_verb, Congruency) %>%
   summarise(prop_error = abs(round(mean(Correct_Response-1), 4)), se = std.error(Correct_Response-1)) %>%
   ggplot(aes(x = fct_rev(Stim_verb), y = prop_error, fill = Congruency),
-         width = .25) + 
-  geom_bar(aes(fill = Congruency, 
+         width = .25) +
+  geom_bar(aes(fill = Congruency,
                fill = after_scale(lighten(fill, .5))),
-           stat = "identity", 
+           stat = "identity",
            position = position_dodge(width = 0.8),
            width = 0.5
   ) +
@@ -369,7 +398,7 @@ FLT_Error_plt <- Flanker %>%
              alpha = 0.6,
              position = position_dodge(width = 0.8),
              show_guide = FALSE
-  ) + 
+  ) +
   stat_summary(
     geom = "text",
     fun = "mean",
@@ -390,9 +419,31 @@ FLT_Error_plt <- Flanker %>%
     breaks = seq(0.1, 1.0, by = .2),
     expand = c(.001, .001)
   )  +
+  # Add significance annotation for 20Hz vs 130Hz (asterisk)
+  geom_path(data = data.frame(x = c(2, 2, 3, 3), 
+                             y = c(0.40, 0.43, 0.43, 0.40), 
+                             Congruency = rep("congruent", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5, y = 0.45, label = "*", 
+           size = 2.5, fontface = "bold") +
+  # Add significance annotation for OFF vs 20Hz (asterisk)
+  geom_path(data = data.frame(x = c(1, 1, 2, 2), 
+                             y = c(0.30, 0.33, 0.33, 0.30), 
+                             Congruency = rep("congruent", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 1.5, y = 0.35, label = "*", 
+           size = 2.5, fontface = "bold") +
   scale_color_manual(values = pal, guide = "none") +
   scale_fill_manual(values = pal, labels = c("Congruent", "Incongruent" )) +
-  guides(fill = guide_legend(override.aes = list(shape = NA, 
+  guides(fill = guide_legend(override.aes = list(shape = NA,
                                                  size = guide_size,
                                                  linetype = 0))
   ) +
@@ -403,6 +454,8 @@ FLT_Error_plt <- Flanker %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
     legend.title = element_text(size=text_size),
     legend.text = element_text(size=text_size),
     legend.key.size = unit(0.3, 'cm'),
@@ -410,7 +463,7 @@ FLT_Error_plt <- Flanker %>%
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono", size = text_size),
     axis.text.x = element_text(
-      color = rev(darken(pal1, .1, space = "HLS")), 
+      color = rev(darken(pal1, .1, space = "HLS")),
       size = text_size,
       face = "bold"
     ),
@@ -427,7 +480,7 @@ FLT_Error_plt <- Flanker %>%
       margin = margin(20, 0, 0, 0)),
     plot.margin = margin(15, 15, 10, 15)
   ) +
-  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), 
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se),
                 alpha = 0.5, position = position_dodge(width = 0.8),
                 width = 0.5)
 
@@ -436,9 +489,14 @@ FLT_Error_plt <- Flanker %>%
 SRT_comb <- ggarrange(SRT_RT_plt + rremove("legend"), SRT_Error_plt, FLT_RT_plt + rremove("legend"),
                       FLT_Error_plt,
                       labels = c("A", "B", "C", "D"),
-                      ncol = 2, nrow = 2, align = "h", widths = c(3,4),
-                      font.label=list(color="black",size=10))
+                      ncol = 2, nrow = 2, align = "h", widths = c(3, 4),
+                      font.label=list(color="black", size=10))
 
+# Save as TIFF
 save_n <- "Flanker_fin.tiff"
 save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
-ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)
+ggsave(path = save_path, filename = save_n, dpi=600, units = "mm", height = 110, width = 160)
+
+# Save as PNG
+save_n_png <- "Flanker_fin.png"
+ggsave(path = save_path, filename = save_n_png, dpi=600, units = "mm", height = 110, width = 160)
