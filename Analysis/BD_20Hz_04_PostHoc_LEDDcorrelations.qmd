@@ -1,0 +1,579 @@
+---
+title: "Post-Hoc Analysis - LEDD and effect sizes"
+author: "Julius Kricheldorff"
+format: html
+editor: visual
+execute:
+  warning: false
+---
+
+## Load the data and packages
+
+Load packages and set wd:
+
+```{r}
+library(haven) # import SPSS files
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(brms)
+library(skimr) # summary output of dfs
+library(plotly)
+library(forcats)
+library(colorspace) # for function darken
+library(ggtext)
+library(gt) # for table visualizations
+library(reshape2) # switch between long and wide format
+library(ggExtra) # marginal distributions
+library(ggpubr)
+
+# Global Colors
+pal1 <- c("#FF6F00FF", "#008EA0FF", "#8A4198FF")
+# Global Variables
+dot_size <- 0.5
+text_size <- 8
+guide_size <- 2
+move_sum_by <- -5.4  
+
+# Set a global theme for ggplot
+theme_set(
+  theme_minimal(base_family = "Zilla Slab") +
+    theme(panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(
+                                   size = text_size, 
+                                   face = "bold"),
+        axis.text.x = element_text(
+          size = text_size,
+          face = "bold"
+        ),
+        axis.title.x = element_text(margin = margin(t = 10),
+                                    size = text_size+2,
+                                    face = "bold"),
+        axis.title.y = element_text(margin = margin(t = 10),
+                                    size = text_size+2,
+                                    face = "bold"),
+        plot.title = element_text(face = "bold", size = text_size+4),
+        plot.subtitle = element_text(
+          size = text_size+2,
+          color = "grey40", hjust = 0
+        )
+  )
+)
+
+
+```
+
+Load the LEDD data and UPDRS data see @tbl-sponsor:
+
+```{r}
+#| label: tbl-uebersicht 
+#| echo: false 
+#| warning: false 
+#| tbl-cap: "Primary Sponsor Information for Matching Trials by Dataset"
+
+
+data <- read_csv2("../Data/Extracted/PartChars.csv", show_col_types = FALSE)|>
+  select(ProbandALT, LEDD)
+
+# load UPDRS data
+path <- file.path("../Data/Original/Daten final/Ergebnisse/UPDRS.sav")
+UPDRS_data <- read_sav(file = path) |>
+  mutate(Stim_verb = as.factor(case_when(
+    Stim == 1 ~ "130Hz",
+    Stim == 2 ~ "20Hz",
+    Stim == 3 ~ "OFF"
+  ))) |>
+  select(UPDRS, Proband, Stim_verb)
+
+# merge data
+
+data <- data |> right_join(UPDRS_data, by = c("ProbandALT" = "Proband"))
+
+# Plot a short sample of the data
+data |> 
+  head(5) |> 
+  gt() |>
+  tab_header(title = md("**Clinical Data**"),
+             subtitle = md("*Sample of the summary of the clinical and experimental data by stimulation condition*")) |>
+  tab_spanner(label = "Quantitative Variables", columns = c("LEDD", "UPDRS")) |>
+  tab_spanner(label = "Qualitative Variables", columns = c("ProbandALT", "Stim_verb"))
+```
+
+Next we have to load the Go-NoGo data and extract the effects that we are interested in:
+
+```{r}
+
+# load data
+GoNoGo<- read_csv(file = "../Data/Extracted/GoNoGo.csv", show_col_types = FALSE) %>%
+  mutate(Error = 1 - Correct_Response,
+         Part_nr = as.numeric(Part_nr)) %>%
+  mutate(StimCon = as_factor(case_when(
+    Stim_verb == "130Hz" ~ "S130Hz",
+    Stim_verb == "20Hz" ~ "S20Hz",
+    Stim_verb == "OFF" ~ "SOFF",
+    
+  )))
+
+GoNoGo <- GoNoGo %>%
+  mutate(Contrast_F = as_factor(case_when(
+    Stim_verb == "130Hz" & GoNoGo == "Go" ~ "S130Hz_Go",
+    Stim_verb == "130Hz" & GoNoGo == "NoGo - Go" ~ "S130Hz_NoGo_Go",
+    Stim_verb == "130Hz" & GoNoGo == "NoGo - Stop" ~ "S130Hz_NoGo_Stop",
+    Stim_verb == "20Hz" & GoNoGo == "Go" ~ "S20Hz_Go",
+    Stim_verb == "20Hz" & GoNoGo == "NoGo - Go" ~ "S20Hz_NoGo_Go",
+    Stim_verb == "20Hz" & GoNoGo == "NoGo - Stop" ~ "S20Hz_NoGo_Stop",
+    Stim_verb == "OFF" & GoNoGo == "Go" ~ "SOFF_Go",
+    Stim_verb == "OFF" & GoNoGo == "NoGo - Go" ~ "SOFF_NoGo_Go",
+    Stim_verb == "OFF" & GoNoGo == "NoGo - Stop" ~ "SOFF_NoGo_Stop",
+  )))
+
+
+# for the RT analysis we filter only correct trials, and exclude trials shorter 
+# than 200ms a longer than 2s
+RT_data <- GoNoGo %>%
+  filter(Correct_Response == 1,
+         RT < 3,
+         RT > 0.2,
+         GoNoGo == "NoGo - Go" | GoNoGo == "Go") |>
+  mutate(RT_ms = RT*1000,
+         GoNoGo = as.factor(GoNoGo)) |>
+  droplevels() |># drop Stop trials
+  mutate(S130Hz = ifelse(Stim_verb == "130Hz", 1, 0),
+         SOFF = ifelse(Stim_verb == "OFF", 1, 0),
+         Go_diff =ifelse(GoNoGo == "NoGo - Go", 0.5, -0.5))
+
+# Lastly we have to sumamrize the data in terms of accuracy and RT for the effects of interest and join the data sets
+
+df_summary <- GoNoGo |>
+  group_by(Part_nr, Stim_verb) |>
+  summarise(mean_Error = mean(Error)) |>
+  ungroup() |>
+  left_join(RT_data |> # join the RT data
+              group_by(Part_nr, Stim_verb) |>
+              summarise(mean_Go = mean(RT_ms[GoNoGo  == "Go"], na.rm = TRUE),
+                        mean_Go_U = mean(RT_ms[GoNoGo == "NoGo - Go"], na.rm = TRUE),
+    # Calculate the difference (Go - Go_U)
+    Slowing = mean_Go_U - mean_Go) |>
+      select(Part_nr, Stim_verb, Slowing) |>
+              ungroup()) |> # join the LEDD and clinical data
+  left_join(data, by = c("Part_nr" ="ProbandALT", "Stim_verb" = "Stim_verb"))
+
+
+```
+
+Now that we have all the relevant data in one place, first let's get a rough overview and calculate correlations between LEDD and mean Error rate and LEDD and slowing:
+
+```{r}
+LEDD_correlations <-  df_summary |>
+  group_by(Stim_verb) |>
+  summarise(cor_LEDD_slow = cor(LEDD, Slowing, use = "complete.obs"),
+            cor_LEDD_slow_p = cor.test(LEDD, Slowing)$p.value,
+            cor_LEDD_Error = cor(LEDD, mean_Error, use = "complete.obs"),
+            cor_LEDD_Error_p = cor.test(LEDD, mean_Error)$p.value)
+
+# join with df_summary
+df_summary <- df_summary |>
+  left_join(LEDD_correlations, by = "Stim_verb")
+
+LEDD_correlations
+```
+
+Next, we want some plots to these statistics:
+
+```{r}
+
+# Create Plot
+LEDD_score_error <- df_summary |>
+  left_join(LEDD_correlations, by = "Stim_verb") |>
+  ggplot(aes(x = mean_Error, y = LEDD, color = Stim_verb)) +
+  geom_smooth(method = "lm", se = FALSE, show.legend = TRUE) +
+  geom_point(
+    show.legend = FALSE)  +
+  facet_grid(~fct_rev(Stim_verb)) +
+  labs(title = "Average Error versus LEDD dosage",
+       x = "Error in %",
+       y = "LEDD score in mg",
+       color = "Stimulation Condition") +
+  scale_color_manual(values = pal1) +
+  geom_text(
+    data = LEDD_correlations,  # Use your correlation data frame
+    aes(
+      x = Inf,  # Left side of each facet
+      y = -Inf,   # Top of each facet
+      label = paste("r =", round(cor_LEDD_Error, 3))  # Assuming cor_coef is in LEDD_correlations
+    ),
+    hjust = 1,  # Left align
+    vjust = -0.5,   # Top align
+    size = text_size/3,
+    show.legend = FALSE
+  )  +
+  guides(fill = guide_legend(override.aes = list(shape = NA, 
+                                                 size = guide_size,
+                                                 linetype = 0, 
+                                                 label.position = "bottom"))
+  ) +
+  theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
+  theme(legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+        axis.text.x = element_text(
+          size = text_size,
+          face = "bold"
+        ),
+        axis.title.x = element_text(margin = margin(t = 10),
+                                    size = text_size),
+        plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+        plot.subtitle = element_text(
+          color = "grey40", hjust = 0,
+          margin = margin(0, 0, 20, 0)
+        ),
+        plot.title.position = "plot",
+        plot.margin = margin(15, 15, 10, 15)
+  )
+
+LEDD_score_slow <- df_summary |>
+  left_join(LEDD_correlations, by = "Stim_verb") |>
+  ggplot(aes(x = Slowing, y = LEDD, color = Stim_verb)) +
+  geom_smooth(method = "lm", se = FALSE, show.legend = TRUE) +
+  facet_grid(~fct_rev(Stim_verb)) +
+  geom_point(
+    show.legend = FALSE)  +
+  labs(title = "RT difference Go trials versus LEDD dosage",
+       x = "RT difference in ms",
+       y = "LEDD score in mg",
+       color = "Stimulation Condition") +
+  scale_color_manual(values = pal1, guide = "none") +
+  scale_fill_manual(values = pal1, guide = "none") +
+  scale_x_continuous(breaks = c(-200, 0, 200, 400, 600)) +
+  geom_text(
+    data = LEDD_correlations,  # Use your correlation data frame
+    aes(
+      x = Inf,  # Left side of each facet
+      y = -Inf,   # Top of each facet
+      label = paste("r =", round(cor_LEDD_slow, 3))  # Assuming cor_coef is in LEDD_correlations
+    ),
+    hjust = 1,  # Left align
+    vjust = -0.5,   # Top align
+    size = text_size/3
+  )  +
+  guides(fill = guide_legend(override.aes = list(shape = NA, 
+                                                 size = guide_size,
+                                                 linetype = 0, 
+                                                 label.position = "bottom"))
+  ) +
+  theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
+  theme(panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+        axis.text.x = element_text(
+          #color = rev(darken(pal1, .1, space = "HLS")), 
+          size = text_size,
+          face = "bold"
+        ),
+        axis.title.x = element_text(margin = margin(t = 10),
+                                    size = text_size),
+        plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+        plot.subtitle = element_text(
+          color = "grey40", hjust = 0,
+          margin = margin(0, 0, 20, 0)
+        ),
+        plot.title.position = "plot",
+        plot.margin = margin(15, 15, 10, 15)
+  )
+
+
+# Plot interactively with plotly
+# ggplotly(LEDD_score_error) %>%
+#   layout(legend = list(orientation = "h",   # horizontal legend
+#                       xanchor = "center",    # center legend
+#                       x = 0.5,               # position legend in center
+#                       y = -0.2)) 
+
+SRT_comb <- ggarrange(LEDD_score_slow + rremove("legend"), LEDD_score_error,
+                      labels = c("A", "B"),
+                      nrow = 2,
+                      heights = c(1, 1.2),
+                      font.label=list(color="black",size=10))
+
+save_n <- "Post_hoc_fin.tiff"
+save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
+ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)
+
+SRT_comb
+```
+
+Lets do the same thing with UPDRS scores and calculate the correlations:
+
+```{r}
+
+UPDRS_correlations <-  df_summary |>   
+  group_by(Stim_verb) |>   
+  summarise(cor_UPDRS_slow = cor(UPDRS, Slowing, use = "complete.obs"),
+            cor_UPDRS_slow_p = cor.test(UPDRS, Slowing)$p.value,
+            cor_UPDRS_Error = cor(UPDRS, mean_Error, use = "complete.obs"),
+            cor_UPDRS_Error_p = cor.test(UPDRS, mean_Error)$p.value)  
+
+# join with df_summary df_summary <- df_summary |>   left_join(LEDD_correlations, by = "Stim_verb")
+UPDRS_correlations
+```
+
+And Plot
+
+```{r}
+
+# Create Plot
+UPDRS_score_error <- df_summary |>
+  left_join(UPDRS_correlations, by = "Stim_verb") |>
+  ggplot(aes(x = mean_Error, y = UPDRS, color = Stim_verb)) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(show.legend = FALSE)  +
+  facet_grid(~fct_rev(Stim_verb)) +
+  labs(title = "Average Error versus UPDRS score",
+       x = "Error in %",
+       y = "UPDRS score",
+       color = "Stimulation Condition") +
+  scale_color_manual(values = pal1) +
+  #scale_fill_manual(values = pal1, guide = "none") +
+  geom_text(
+    data = UPDRS_correlations,  # Use your correlation data frame
+    aes(
+      x = Inf,  # Left side of each facet
+      y = -Inf,   # Top of each facet
+      label = paste("r =", round(cor_UPDRS_Error, 3))  # Assuming cor_coef is in UPDRS_correlations
+    ),
+    hjust = 1,  # Left align
+    vjust = -0.5,   # Top align
+    size = text_size/3,
+    show.legend = FALSE
+  )  +
+  guides(fill = guide_legend(override.aes = list(shape = NA, 
+                                                 size = guide_size,
+                                                 linetype = 0, 
+                                                 label.position = "bottom"))
+  ) +
+  theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
+  theme(legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+        axis.text.x = element_text(
+          size = text_size,
+          face = "bold"
+        ),
+        axis.title.x = element_text(margin = margin(t = 10),
+                                    size = text_size),
+        plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+        plot.subtitle = element_text(
+          color = "grey40", hjust = 0,
+          margin = margin(0, 0, 20, 0)
+        ),
+        plot.title.position = "plot",
+        plot.margin = margin(15, 15, 10, 15)
+  )
+
+UPDRS_score_slow <- df_summary |>
+  left_join(UPDRS_correlations, by = "Stim_verb") |>
+  ggplot(aes(x = Slowing, y = UPDRS, color = Stim_verb)) +
+  geom_smooth(method = "lm", se = FALSE, show.legend = TRUE) +
+  facet_grid(~fct_rev(Stim_verb)) +
+  geom_point(
+    show.legend = FALSE)  +
+  labs(title = "RT difference Go trials versus UPDRS score",
+       x = "RT difference in ms",
+       y = "UPDRS score",
+       color = "Stimulation Condition") +
+  scale_color_manual(values = pal1, guide = "none") +
+  scale_fill_manual(values = pal1, guide = "none") +
+  scale_x_continuous(breaks = c(-200, 0, 200, 400, 600)) +
+  geom_text(
+    data = UPDRS_correlations,  # Use your correlation data frame
+    aes(
+      x = Inf,  # Left side of each facet
+      y = -Inf,   # Top of each facet
+      label = paste("r =", round(cor_UPDRS_slow, 3))  # Assuming cor_coef is in UPDRS_correlations
+    ),
+    hjust = 1,  # Left align
+    vjust = -0.5,   # Top align
+    size = text_size/3
+  )  +
+  guides(fill = guide_legend(override.aes = list(shape = NA, 
+                                                 size = guide_size,
+                                                 linetype = 0, 
+                                                 label.position = "bottom"))
+  ) +
+  theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
+  theme(panel.grid.minor = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(family = "Roboto Mono",size = text_size),
+        axis.text.x = element_text(
+          #color = rev(darken(pal1, .1, space = "HLS")), 
+          size = text_size,
+          face = "bold"
+        ),
+        axis.title.x = element_text(margin = margin(t = 10),
+                                    size = text_size),
+        plot.title = element_text(face = "bold", size = text_size,margin = margin(0, 0, 3, 0)),
+        plot.subtitle = element_text(
+          color = "grey40", hjust = 0,
+          margin = margin(0, 0, 20, 0)
+        ),
+        plot.title.position = "plot",
+        # plot.caption = element_markdown(
+        #   color = "grey40", lineheight = 1.2,
+        #   margin = margin(20, 0, 0, 0)),
+        plot.margin = margin(15, 15, 10, 15)
+  )
+
+
+# Plot interactively with plotly
+# ggplotly(UPDRS_score_error) %>%
+#   layout(legend = list(orientation = "h",   # horizontal legend
+#                       xanchor = "center",    # center legend
+#                       x = 0.5,               # position legend in center
+#                       y = -0.2)) 
+
+UPDRS_comb <- ggarrange(UPDRS_score_slow + rremove("legend"), UPDRS_score_error,
+                      labels = c("A", "B"),
+                      nrow = 2,
+                      heights = c(1, 1.2),
+                      font.label=list(color="black",size=10))
+
+save_n <- "Post_hoc_fin_UPDRS.tiff"
+save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
+ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)
+
+UPDRS_comb
+```
+
+Testing Correlational Matrix:
+
+```{r}
+
+cor_data = round(cor(df_summary |> select(mean_Error, mean_RT, LEDD, UPDRS) |> drop_na()),2)
+
+lf_cor = melt(cor_data)
+
+# next we use this data for a heatmap plot
+hm <- ggplot(data = lf_cor, aes(x = Var1, y = Var2, fill=value)) +
+  geom_tile() +
+  geom_text(aes(Var1, Var2, label = value), color = "black", size = 4) + scale_fill_gradient2(low = "#063970", high = "#a60a0a", mid = "white", midpoint = 0, limit = c(-1,1), name = "Pearson Correlation") +
+  labs(
+    x = "Variable 1",
+    y = "Variable 2",
+    subtitle = "Correlation between clinical variables and experimental outcomes",
+    title  = "Correlations"
+  )
+
+ggplotly(hm)
+```
+
+Plot Marginal density plots:
+
+```{r}
+# Create base scatterplot
+UPDRS_score <- df_summary |> 
+  ggplot(aes(x = mean_Error, y = UPDRS, color = factor(Stim_verb))) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(
+    show.legend = FALSE) +
+  scale_color_manual(values = pal1, guide = "none") +
+  scale_fill_manual(values = pal1, guide = "none")
+
+# Add marginal plots
+ggMarginal(UPDRS_score, 
+          type = "density",
+          groupColour = TRUE,  # This matches the colors from your main plot
+          groupFill = TRUE)
+```
+
+Next let us visualize some rain cloud plots:
+
+```{r}
+df_summary %>%
+  #group_by(Stim_verb) %>%
+  ggplot(aes(x = fct_rev(Stim_verb), y = mean_RT)) + 
+  ggdist::stat_halfeye(
+    aes(fill = Stim_verb,
+        fill = after_scale(lighten(fill, .5))),
+    adjust = .8, 
+    width = .5, 
+    .width = 0,
+    justification = -.5, 
+    point_color = NA,
+    position = position_dodge(width = 1)
+  )+
+  geom_boxplot(#aes(color = Stim_verb,
+    # ),
+    width = .35, 
+    outlier.shape = NA,
+    show_guide = FALSE
+  ) +
+  geom_point(
+             aes(fill = Stim_verb,
+                 fill = after_scale(darken(fill, .1, space = "HLS"))),
+             stat = "identity",
+             shape = 21,
+             stroke = .4,
+             size = dot_size,
+             alpha = .6,
+             position = position_dodge(width = 1),
+             show_guide = FALSE
+  ) +
+  stat_summary(
+    geom = "text",
+    fun = "median",
+    aes(label = round(..y..),
+        color = Stim_verb,
+        fill = after_scale(darken(color, .3, space = "HLS"))),
+    family = "Roboto Mono",
+    fontface = "bold",
+    size = 2.5,
+    vjust = move_sum_by-3,
+    position = position_dodge(width = 1),
+    show_guide = FALSE
+  ) +
+  scale_y_continuous(
+    limits = c(200, 2000),
+    breaks = seq(200, 2000, by = 400),
+    expand = c(.001, .001)
+  ) +
+  scale_color_manual(values = pal1, guide = "none") +
+  scale_fill_manual(values = pal1, guide = "none") +
+  guides(fill = guide_legend(override.aes = list(shape = NA,
+                                                 size = guide_size,
+                                                 linetype = 0,
+                                                 label.position = "bottom"))
+  ) +
+  labs(
+    x = NULL,
+    y = "RT in ms",
+    title = "Stop-Change Task",
+    subtitle = "SCRT"
+  ) 
+```
+
+A simple bar graph:
+
+```{r}
+df_summary |> 
+  arrange(desc(LEDD)) |>
+  ggplot(aes(x = reorder(Part_nr,LEDD), y = LEDD)) +
+  geom_col() +
+  coord_flip()
+```
+
+Histogram
+
+```{r}
+df_summary |> 
+  ggplot(aes(x = mean_RT, fill = factor(Stim_verb))) +
+  geom_histogram() 
+```
+
+```{r}
+new <- df_summary |>
+  left_join(LEDD_correlations, by = "Stim_verb") 
+```
