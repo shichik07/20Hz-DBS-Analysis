@@ -162,7 +162,9 @@ Stop_RT_plt <- SSRT %>%
         plot.caption = element_markdown(
           color = "grey40", lineheight = 1.2,
           margin = margin(20, 0, 0, 0)),
-        plot.margin = margin(15, 15, 10, 15)
+        plot.margin = margin(15, 15, 10, 15),
+        panel.background = element_rect(fill = "white", color = NA),
+        plot.background = element_rect(fill = "white", color = NA)
   )
 
 ## Now Next Let us plot the Error Rates
@@ -248,11 +250,10 @@ Stop_Error_plt <- StoppSignal %>%
     plot.caption = element_markdown(
       color = "grey40", lineheight = 1.2,
       margin = margin(20, 0, 0, 0)),
-    plot.margin = margin(15, 15, 10, 15)
-  ) +
-  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), 
-                alpha = 0.5, position = position_dodge(width = 0.8),
-                width = 0.5)
+    plot.margin = margin(15, 15, 10, 15),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
 
 ### Now the GoNoGo data
 # set directory
@@ -335,6 +336,17 @@ GNG_RT_plt <-  GoNoGo_cleanRT %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   ) +
+  # Add significance annotation for 20Hz certain Go vs uncertain Go trials (asterisk)
+  geom_path(data = data.frame(x = c(2.2, 2.2, 2.8, 2.8), 
+                             y = c(1850, 1900, 1900, 1850), 
+                             GoNoGo = c("Go", "Go", "uncertain Go", "uncertain Go")),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5, y = 1950, label = "*", 
+           size = 2.5, fontface = "bold") +
   scale_y_continuous(
     limits = c(200, 2000),
     breaks = seq(200, 2000, by = 400),
@@ -355,7 +367,6 @@ GNG_RT_plt <-  GoNoGo_cleanRT %>%
   ) +
   theme_minimal(base_family = "Zilla Slab", base_size = text_size) +
   theme(
-    
     panel.grid.minor = element_blank(),
     axis.ticks = element_blank(),
     axis.text.y = element_text(family = "Roboto Mono",size = text_size),
@@ -375,7 +386,9 @@ GNG_RT_plt <-  GoNoGo_cleanRT %>%
     plot.caption = element_markdown(
       color = "grey40", lineheight = 1.2,
       margin = margin(20, 0, 0, 0)),
-    plot.margin = margin(15, 15, 10, 15)
+    plot.margin = margin(15, 15, 10, 15),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
   )
 
 ## Now Next Let us plot the Error Rates
@@ -428,6 +441,42 @@ GNG_Error_plt <- GoNoGo %>%
     position = position_dodge(width = 1),
     show_guide = FALSE
   )  +
+  # Add significance annotation for 20Hz uncertain Go trials vs 130Hz uncertain Go trials
+  geom_path(data = data.frame(x = c(2-0.3, 2-0.3, 3-0.3, 3-0.3), 
+                             y = c(0.25, 0.35, 0.35, 0.25), 
+                             GoNoGo = rep("uncertain Go", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5-0.3, y = 0.37, label = "*", 
+           size = 2.5, fontface = "bold") +
+           
+  # Add significance annotation for 20Hz uncertain Go trials vs OFF uncertain Go trials
+  geom_path(data = data.frame(x = c(1-0.3, 1-0.3, 2-0.3, 2-0.3), 
+                             y = c(0.25-0.05, 0.42-0.05, 0.42-0.05, 0.25-0.05), 
+                             GoNoGo = rep("uncertain Go", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 1.5-0.3, y = 0.44-0.05, label = "*", 
+           size = 2.5, fontface = "bold") +
+           
+  # Add significance annotation for 20Hz NoGo trials vs 130Hz NoGo trials
+  geom_path(data = data.frame(x = c(2+0.3, 2+0.3, 3+0.3, 3+0.3), 
+                             y = c(0.55, 0.57, 0.57, 0.55), 
+                             GoNoGo = rep("uncertain Go", 4)),
+           aes(x = x, y = y), 
+           inherit.aes = FALSE,
+           color = "gray30",
+           linewidth = 0.8) +
+  # Add asterisk
+  annotate("text", x = 2.5+0.3, y = 0.6, label = "*", 
+           size = 2.5, fontface = "bold") +
+           
   scale_y_continuous(
     labels = scales::percent,
     limits = c(0, 0.62),
@@ -469,13 +518,23 @@ GNG_Error_plt <- GoNoGo %>%
     plot.caption = element_markdown(
       color = "grey40", lineheight = 1.2,
       margin = margin(20, 0, 0, 0)),
-    plot.margin = margin(15, 15, 10, 15)
-  ) +
+    plot.margin = margin(15, 15, 10, 15),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+# combine the plots
+
+# Make sure all plots have proper error bars
+Stop_Error_plt <- Stop_Error_plt + 
   geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), 
                 alpha = 0.5, position = position_dodge(width = 0.8),
                 width = 0.5)
 
-# combine the plots
+GNG_Error_plt <- GNG_Error_plt + 
+  geom_errorbar(aes(ymin = prop_error - se, ymax = prop_error + se), 
+                alpha = 0.5, position = position_dodge(width = 0.8),
+                width = 0.5)
 
 SRT_comb <- ggarrange(Stop_RT_plt + rremove("legend"), Stop_Error_plt, GNG_RT_plt + rremove("legend"),
                       GNG_Error_plt,
@@ -483,6 +542,11 @@ SRT_comb <- ggarrange(Stop_RT_plt + rremove("legend"), Stop_Error_plt, GNG_RT_pl
                       ncol = 2, nrow = 2, align = "h", widths = c(3,4),
                       font.label=list(color="black",size=10))
 
+# Save as TIFF
 save_n <- "Inhibition_fin.tiff"
 save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
-ggsave(path = save_path, filename = save_n,  dpi=600,  units = "mm", height =  110, width = 160)
+ggsave(path = save_path, filename = save_n, dpi=600, units = "mm", height = 110, width = 160)
+
+# Save as PNG
+save_n_png <- "Inhibition_fin.png"
+ggsave(path = save_path, filename = save_n_png, dpi=600, units = "mm", height = 110, width = 160)
