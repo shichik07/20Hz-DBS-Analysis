@@ -262,6 +262,18 @@ FLT_Congruency_plt <- ggarrange(
                                  size = text_size, 
                                  family = "Zilla Slab"))
 
+# Create a function to add white background to any plot
+add_white_bg <- function(plot) {
+  plot_with_bg <- ggplot() + 
+    theme(panel.background = element_rect(fill = "white", color = NA),
+          plot.background = element_rect(fill = "white", color = NA)) +
+    annotation_custom(ggplotGrob(plot))
+  return(plot_with_bg)
+}
+
+# Apply white background to the combined figure
+FLT_Congruency_plt <- add_white_bg(FLT_Congruency_plt)
+
 # Save the figure
 save_path <- "D:/Data/Dropbox/PhD_Thesis/UniOL/Julius/20Hz-DBS-Analysis/Figures/Paper"
 ggsave(path = save_path, filename = "Flanker_Congruency_Effect.tiff", plot = FLT_Congruency_plt, dpi = 600, units = "mm", height = 110, width = 160)
